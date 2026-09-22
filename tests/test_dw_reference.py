@@ -49,7 +49,8 @@ def insert_staging_row(cursor, **overrides):
     row.update(overrides)
     columns = ", ".join(row)
     placeholders = ", ".join(["%s"] * len(row))
-    cursor.execute(f"INSERT INTO staging.case_event ({columns}) VALUES ({placeholders})", list(row.values()))
+    sql = f"INSERT INTO staging.case_event ({columns}) VALUES ({placeholders})"
+    cursor.execute(sql, list(row.values()))
 
 
 def fetch_scalars(cursor, sql):
@@ -77,7 +78,9 @@ def test_seed_courts_twice_does_not_duplicate(cursor):
 def test_seed_outcomes_creates_the_four_outcomes(cursor):
     seed_outcomes(cursor)
 
-    codes = fetch_scalars(cursor, "SELECT outcome_code FROM dw.dim_decision_outcome ORDER BY outcome_code")
+    codes = fetch_scalars(
+        cursor, "SELECT outcome_code FROM dw.dim_decision_outcome ORDER BY outcome_code"
+    )
 
     assert codes == ["Denied", "Granted", "Neutral", "PartiallyGranted"]
 
@@ -85,7 +88,9 @@ def test_seed_outcomes_creates_the_four_outcomes(cursor):
 def test_seed_outcomes_only_neutral_does_not_count_in_metric(cursor):
     seed_outcomes(cursor)
 
-    codes = fetch_scalars(cursor, "SELECT outcome_code FROM dw.dim_decision_outcome WHERE NOT counts_in_metric")
+    codes = fetch_scalars(
+        cursor, "SELECT outcome_code FROM dw.dim_decision_outcome WHERE NOT counts_in_metric"
+    )
 
     assert codes == ["Neutral"]
 
@@ -134,7 +139,8 @@ def test_load_movements_inserts_a_new_code_as_unverified_neutral(cursor):
 def test_load_movements_does_not_overwrite_a_verified_code(cursor):
     seed_outcomes(cursor)
     cursor.execute(
-        "INSERT INTO dw.dim_movement (movement_code, movement_name, outcome_sk, code_verified, polarity_reference) "
+        "INSERT INTO dw.dim_movement "
+        "(movement_code, movement_name, outcome_sk, code_verified, polarity_reference) "
         "SELECT 219, 'Procedência', outcome_sk, true, 'pretensao_autor' "
         "FROM dw.dim_decision_outcome WHERE outcome_code = 'Granted'"
     )
