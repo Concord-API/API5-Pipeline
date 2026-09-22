@@ -37,6 +37,7 @@ def hit(id_, sort_value):
 def cursor(postgres_url):
     with psycopg2.connect(postgres_url) as connection, connection.cursor() as cur:
         ensure(cur)
+        cur.execute("TRUNCATE raw.datajud_case")
         yield cur
         connection.commit()
 
