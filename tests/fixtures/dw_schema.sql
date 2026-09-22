@@ -75,3 +75,27 @@ CREATE TABLE dw.dim_movement (
     ),
     CONSTRAINT dim_movement_verified_needs_polarity CHECK (NOT code_verified OR polarity_reference IS NOT NULL)
 );
+
+CREATE TABLE dw.dim_date (
+    date_sk integer PRIMARY KEY,
+    full_date date NOT NULL UNIQUE,
+    year smallint NOT NULL,
+    quarter smallint NOT NULL,
+    month smallint NOT NULL,
+    month_name text NOT NULL,
+    day smallint NOT NULL
+);
+
+CREATE TABLE dw.fact_case_event (
+    event_sk bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    case_sk bigint NOT NULL REFERENCES dw.dim_case (case_sk),
+    court_sk smallint NOT NULL REFERENCES dw.dim_court (court_sk),
+    judging_body_sk bigint REFERENCES dw.dim_judging_body (judging_body_sk),
+    movement_sk smallint NOT NULL REFERENCES dw.dim_movement (movement_sk),
+    date_sk integer REFERENCES dw.dim_date (date_sk),
+    occurred_at timestamp with time zone NOT NULL,
+    source text NOT NULL DEFAULT 'datajud',
+    source_url text NOT NULL,
+    extracted_at timestamp with time zone NOT NULL,
+    natural_key text NOT NULL UNIQUE
+);
