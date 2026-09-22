@@ -69,6 +69,9 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
     assert "0000001-00.2024.8.26.0100" in content
 
     with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute("REFRESH MATERIALIZED VIEW dw.case_current_result")
+        cursor.execute("SELECT count(*) FROM dw.case_current_result")
+        assert cursor.fetchone() == (1,)
         cursor.execute("SELECT theme_name FROM dw.dim_theme")
         assert cursor.fetchall() == [("Contratos",)]
         cursor.execute("SELECT count(*) FROM dw.fact_case_event")

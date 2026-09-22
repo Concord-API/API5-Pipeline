@@ -7,6 +7,7 @@ from pipeline.dw_reference import (
     load_movements,
     seed_courts,
     seed_outcomes,
+    seed_verified_movements,
 )
 
 
@@ -60,24 +61,26 @@ def test_seed_courts_twice_does_not_duplicate(cursor):
     assert len(codes) == 3
 
 
-def test_seed_outcomes_creates_the_four_outcomes(cursor):
+def test_seed_outcomes_creates_the_five_outcomes(cursor):
     seed_outcomes(cursor)
 
     codes = fetch_scalars(
         cursor, "SELECT outcome_code FROM dw.dim_decision_outcome ORDER BY outcome_code"
     )
 
-    assert codes == ["Denied", "Granted", "Neutral", "PartiallyGranted"]
+    assert codes == ["Denied", "Dismissed", "Granted", "Neutral", "PartiallyGranted"]
 
 
-def test_seed_outcomes_only_neutral_does_not_count_in_metric(cursor):
+def test_seed_outcomes_only_neutral_and_dismissed_do_not_count(cursor):
     seed_outcomes(cursor)
 
     codes = fetch_scalars(
-        cursor, "SELECT outcome_code FROM dw.dim_decision_outcome WHERE NOT counts_in_metric"
+        cursor,
+        "SELECT outcome_code FROM dw.dim_decision_outcome "
+        "WHERE NOT counts_in_metric ORDER BY outcome_code",
     )
 
-    assert codes == ["Neutral"]
+    assert codes == ["Dismissed", "Neutral"]
 
 
 def test_load_case_classes_inserts_distinct_classes(cursor):
@@ -140,3 +143,56 @@ def test_load_movements_does_not_overwrite_a_verified_code(cursor):
     )
 
     assert cursor.fetchone() == (True, "Granted")
+
+
+def movement(cursor, code):
+    cursor.execute(
+        "SELECT o.outcome_code, dm.code_verified, dm.polarity_reference "
+        "FROM dw.dim_movement dm JOIN dw.dim_decision_outcome o ON o.outcome_sk = dm.outcome_sk "
+        "WHERE dm.movement_code = %s",
+        (code,),
+    )
+    return cursor.fetchone()
+
+
+def test_seed_verified_movements_maps_each_code_to_its_outcome(cursor):
+    seed_outcomes(cursor)
+
+    seed_verified_movements(cursor)
+
+    assert movement(cursor, 219) == ("Granted", True, "pretensao_autor")
+    assert movement(cursor, 220) == ("Denied", True, "pretensao_autor")
+    assert movement(cursor, 221) == ("PartiallyGranted", True, "pretensao_autor")
+    assert movement(cursor, 237) == ("Granted", True, "pretensao_recorrente")
+    assert movement(cursor, 238) == ("PartiallyGranted", True, "pretensao_recorrente")
+    assert movement(cursor, 239) == ("Denied", True, "pretensao_recorrente")
+
+
+def test_seed_verified_movements_upgrades_a_code_loaded_as_neutral(cursor):
+    seed_outcomes(cursor)
+    insert_staging_row(cursor, movement_code=219, movement_name="Procedência")
+    load_movements(cursor)
+
+    seed_verified_movements(cursor)
+
+    assert movement(cursor, 219) == ("Granted", True, "pretensao_autor")
+
+
+def test_a_new_load_does_not_downgrade_a_verified_code(cursor):
+    seed_outcomes(cursor)
+    seed_verified_movements(cursor)
+    insert_staging_row(cursor, movement_code=219, movement_name="Procedência")
+
+    load_movements(cursor)
+
+    assert movement(cursor, 219) == ("Granted", True, "pretensao_autor")
+
+
+def test_a_code_outside_the_list_stays_neutral_and_unverified(cursor):
+    seed_outcomes(cursor)
+    seed_verified_movements(cursor)
+    insert_staging_row(cursor, movement_code=999, movement_name="Outro")
+
+    load_movements(cursor)
+
+    assert movement(cursor, 999) == ("Neutral", False, None)

@@ -25,7 +25,8 @@ def test_table_names_lists_the_dw_tables(cursor):
 def test_matview_names_lists_only_materialized_views(cursor):
     matviews = matview_names(cursor)
 
-    assert matviews == ["a_test_view"]
+    assert "a_test_view" in matviews
+    assert "dim_court" not in matviews
 
 
 def test_build_puts_begin_first_and_commit_last():
