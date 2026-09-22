@@ -2,6 +2,8 @@ import hashlib
 import json
 import time
 
+import requests
+
 PAGE_SIZE = 100
 MAX_CONSECUTIVE_EMPTY_PAGES = 5
 
@@ -30,7 +32,11 @@ def search_page(
         body["search_after"] = search_after
 
     for attempt in range(retries):
-        response = session.post(url, json=body, timeout=180)
+        try:
+            response = session.post(url, json=body, timeout=180)
+        except requests.RequestException:
+            sleep(min(30, 3 * (attempt + 1)))
+            continue
         if response.status_code == 429 or response.status_code >= 500:
             sleep(min(30, 3 * (attempt + 1)))
             continue

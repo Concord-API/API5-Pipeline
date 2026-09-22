@@ -1,5 +1,6 @@
 import psycopg2
 import pytest
+import requests
 
 from pipeline.datajud import collect
 from pipeline.raw_schema import ensure
@@ -26,7 +27,10 @@ class FakeSession:
 
     def post(self, url, json, timeout):
         self.requests.append(json)
-        return self._responses.pop(0)
+        response = self._responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
 
 
 def hit(id_, sort_value):
@@ -105,3 +109,16 @@ def test_retries_on_a_429_and_then_succeeds(cursor):
     inserted = collect(session, cursor, URL, "tjsp", {}, quota=100, sleep=lambda _: None)
 
     assert inserted == 1
+
+
+def test_retries_on_a_network_error_and_then_succeeds(cursor):
+    session = FakeSession([
+        requests.ConnectionError("connection reset"),
+        FakeResponse(200, {"hits": {"hits": [hit("a", 1)]}}),
+        FakeResponse(200, {"hits": {"hits": []}}),
+    ])
+
+    inserted = collect(session, cursor, URL, "tjsp", {}, quota=100, sleep=lambda _: None)
+
+    assert inserted == 1
+    assert row_count(cursor) == 1
