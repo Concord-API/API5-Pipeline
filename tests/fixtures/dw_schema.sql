@@ -50,6 +50,19 @@ CREATE TABLE dw.dim_case (
     CONSTRAINT dim_case_source_link_type_check CHECK (source_link_type IS NULL OR source_link_type IN ('direto', 'portal'))
 );
 
+CREATE TABLE dw.dim_subject (
+    subject_sk bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    subject_name text NOT NULL UNIQUE,
+    subject_code integer NOT NULL,
+    tpu_area text
+);
+
+CREATE TABLE dw.bridge_case_subject (
+    case_sk bigint NOT NULL REFERENCES dw.dim_case (case_sk),
+    subject_sk bigint NOT NULL REFERENCES dw.dim_subject (subject_sk),
+    PRIMARY KEY (case_sk, subject_sk)
+);
+
 CREATE TABLE dw.dim_movement (
     movement_sk smallint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     movement_code integer NOT NULL UNIQUE,
