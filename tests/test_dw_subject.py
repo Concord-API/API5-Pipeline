@@ -47,7 +47,9 @@ def insert_staging_row(cursor, subjects, **overrides):
 
 
 def fetch_subjects(cursor):
-    cursor.execute("SELECT subject_name, subject_code, tpu_area FROM dw.dim_subject ORDER BY subject_name")
+    cursor.execute(
+        "SELECT subject_name, subject_code, tpu_area FROM dw.dim_subject ORDER BY subject_name"
+    )
     return cursor.fetchall()
 
 
@@ -61,7 +63,9 @@ def test_a_subject_repeated_across_cases_becomes_one_row(cursor):
 
 
 def test_a_subject_without_name_or_code_is_ignored(cursor):
-    insert_staging_row(cursor, [{"codigo": 1127}, {"nome": "Sem código"}, {"codigo": 1128, "nome": "Danos"}])
+    insert_staging_row(
+        cursor, [{"codigo": 1127}, {"nome": "Sem código"}, {"codigo": 1128, "nome": "Danos"}]
+    )
 
     load_subjects(cursor)
 
