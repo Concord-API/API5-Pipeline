@@ -10,9 +10,14 @@ DW_SCHEMA_SQL = os.path.join(os.path.dirname(__file__), "fixtures", "dw_schema.s
 
 
 @pytest.fixture(scope="session")
-def postgres_url():
+def postgres_container():
     with PostgresContainer("postgres:16") as container:
-        yield container.get_connection_url().replace("+psycopg2", "")
+        yield container
+
+
+@pytest.fixture(scope="session")
+def postgres_url(postgres_container):
+    return postgres_container.get_connection_url().replace("+psycopg2", "")
 
 
 @pytest.fixture(scope="session")
