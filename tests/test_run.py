@@ -6,6 +6,7 @@ import psycopg2
 
 from pipeline.raw_schema import ensure as ensure_raw
 from pipeline.run import run
+from pipeline.theme_registry import ensure as ensure_theme_registry
 from pipeline.tpu import load as load_tpu
 
 FIXTURE_TPU = os.path.join(os.path.dirname(__file__), "fixtures", "tpu_sample.json")
@@ -50,6 +51,7 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
             "RESTART IDENTITY CASCADE"
         )
         cursor.execute("TRUNCATE staging.case_event")
+        ensure_theme_registry(cursor)
         cursor.execute("TRUNCATE etl.theme_registry RESTART IDENTITY CASCADE")
         ensure_raw(cursor)
         cursor.execute("TRUNCATE raw.datajud_case RESTART IDENTITY CASCADE")
