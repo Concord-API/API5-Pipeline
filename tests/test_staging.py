@@ -21,7 +21,9 @@ def row(case_number, movement_code):
 
 def fetch_all(dsn):
     with psycopg2.connect(dsn) as connection, connection.cursor() as cursor:
-        cursor.execute("SELECT case_number, movement_code FROM staging.case_event ORDER BY case_number")
+        cursor.execute(
+            "SELECT case_number, movement_code FROM staging.case_event ORDER BY case_number"
+        )
         return cursor.fetchall()
 
 
