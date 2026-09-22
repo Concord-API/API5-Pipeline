@@ -1,8 +1,8 @@
 import os
 from datetime import datetime, timezone
 
-from pipeline.transform import flatten, map_court_level, parse_datetime
 from pipeline.tpu import load
+from pipeline.transform import flatten, map_court_level, parse_datetime
 
 FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "tpu_sample.json")
 COLLECTED_AT = datetime(2026, 1, 2, tzinfo=timezone.utc)
@@ -42,7 +42,9 @@ def test_flattens_a_civil_case_into_one_row_per_movement():
 
 
 def test_discards_the_whole_case_when_any_subject_is_penal():
-    payload = civil_payload(assuntos=[{"codigo": 1127, "nome": "Contratos"}, {"codigo": 3568, "nome": "Furto"}])
+    payload = civil_payload(
+        assuntos=[{"codigo": 1127, "nome": "Contratos"}, {"codigo": 3568, "nome": "Furto"}]
+    )
 
     assert flatten(1, "tjsp", "https://x", COLLECTED_AT, payload, tpu()) == []
 
@@ -60,7 +62,9 @@ def test_discards_a_movement_without_occurred_at():
 
 
 def test_discards_a_movement_without_a_code():
-    payload = civil_payload(movimentos=[{"nome": "Procedência", "dataHora": "2024-06-01T12:00:00Z"}])
+    payload = civil_payload(
+        movimentos=[{"nome": "Procedência", "dataHora": "2024-06-01T12:00:00Z"}]
+    )
 
     assert flatten(1, "tjsp", "https://x", COLLECTED_AT, payload, tpu()) == []
 
@@ -68,7 +72,9 @@ def test_discards_a_movement_without_a_code():
 def test_uses_the_fallback_name_when_the_payload_has_no_name():
     payload = civil_payload(movimentos=[{"codigo": 219, "dataHora": "2024-06-01T12:00:00Z"}])
 
-    rows = flatten(1, "tjsp", "https://x", COLLECTED_AT, payload, tpu(), movement_names={"219": "Procedência"})
+    rows = flatten(
+        1, "tjsp", "https://x", COLLECTED_AT, payload, tpu(), movement_names={"219": "Procedência"}
+    )
 
     assert rows[0][12] == "Procedência"
 
@@ -80,7 +86,8 @@ def test_discards_a_movement_without_any_name():
 
 
 def test_parse_datetime_accepts_iso_with_z():
-    assert parse_datetime("2024-06-01T12:00:00Z") == datetime(2024, 6, 1, 12, 0, tzinfo=timezone.utc)
+    expected = datetime(2024, 6, 1, 12, 0, tzinfo=timezone.utc)
+    assert parse_datetime("2024-06-01T12:00:00Z") == expected
 
 
 def test_parse_datetime_accepts_datajud_digits():
