@@ -34,6 +34,7 @@ def transform_all(cursor, tpu, movement_names=None):
 def load_dimensions(cursor, tpu):
     dw_reference.seed_courts(cursor)
     dw_reference.seed_outcomes(cursor)
+    dw_reference.seed_verified_movements(cursor)
     dw_reference.load_case_classes(cursor)
     dw_reference.load_judging_bodies(cursor)
     dw_reference.load_movements(cursor)

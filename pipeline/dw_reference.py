@@ -9,6 +9,16 @@ OUTCOMES = [
     ("PartiallyGranted", "Parcialmente procedente", True),
     ("Denied", "Improcedente", True),
     ("Neutral", "Sem resultado conferido", False),
+    ("Dismissed", "Extinção sem julgamento de mérito", False),
+]
+
+VERIFIED_MOVEMENTS = [
+    (219, "Procedência", "Granted", "pretensao_autor"),
+    (220, "Improcedência", "Denied", "pretensao_autor"),
+    (221, "Procedência em Parte", "PartiallyGranted", "pretensao_autor"),
+    (237, "Provimento", "Granted", "pretensao_recorrente"),
+    (238, "Provimento em Parte", "PartiallyGranted", "pretensao_recorrente"),
+    (239, "Não-Provimento", "Denied", "pretensao_recorrente"),
 ]
 
 
@@ -27,6 +37,20 @@ def seed_outcomes(cursor):
             "INSERT INTO dw.dim_decision_outcome (outcome_code, outcome_label, counts_in_metric) "
             "VALUES (%s, %s, %s) ON CONFLICT (outcome_code) DO NOTHING",
             (code, label, counts),
+        )
+
+
+def seed_verified_movements(cursor):
+    for code, name, outcome, polarity in VERIFIED_MOVEMENTS:
+        cursor.execute(
+            "INSERT INTO dw.dim_movement "
+            "(movement_code, movement_name, outcome_sk, code_verified, polarity_reference) "
+            "SELECT %s, %s, outcome_sk, true, %s "
+            "FROM dw.dim_decision_outcome WHERE outcome_code = %s "
+            "ON CONFLICT (movement_code) DO UPDATE SET "
+            "outcome_sk = EXCLUDED.outcome_sk, code_verified = true, "
+            "polarity_reference = EXCLUDED.polarity_reference",
+            (code, name, polarity, outcome),
         )
 
 
