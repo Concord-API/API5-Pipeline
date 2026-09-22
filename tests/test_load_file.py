@@ -1,7 +1,7 @@
 import psycopg2
 import pytest
 
-from pipeline.load_file import build, matview_names, table_names
+from pipeline.load_file import build, matview_names, refresh_order, table_names
 
 
 @pytest.fixture
@@ -60,3 +60,21 @@ def test_build_without_matviews_has_no_refresh():
     script = build(["dim_court"], [], "-- dump")
 
     assert "REFRESH" not in script
+
+
+def test_refresh_order_puts_each_view_after_the_view_it_reads():
+    order = refresh_order(["a", "b", "c"], [("a", "b"), ("b", "c")])
+
+    assert order == ["c", "b", "a"]
+
+
+def test_refresh_order_keeps_independent_views_alphabetical():
+    order = refresh_order(["theme_summary", "case_current_result"], [])
+
+    assert order == ["case_current_result", "theme_summary"]
+
+
+def test_refresh_order_handles_a_view_read_by_two_others():
+    order = refresh_order(["a", "b", "c", "d"], [("b", "a"), ("c", "a"), ("d", "b"), ("d", "c")])
+
+    assert order == ["a", "b", "c", "d"]
