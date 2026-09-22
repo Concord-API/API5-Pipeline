@@ -3,7 +3,10 @@ from pipeline.theme_build import build
 
 def test_a_subject_in_a_curated_group_joins_the_group_theme():
     subjects = [("Atraso de vôo", 1), ("Cancelamento de vôo", 2)]
-    groups = [{"aliases": ["Atraso de vôo", "Cancelamento de vôo"], "theme_name": "Voos", "subject_area": "CONSUMIDOR"}]
+    groups = [{
+        "aliases": ["Atraso de vôo", "Cancelamento de vôo"],
+        "theme_name": "Voos", "subject_area": "CONSUMIDOR",
+    }]
 
     themes = build(subjects, groups)
 
@@ -24,7 +27,10 @@ def test_a_subject_outside_any_group_becomes_its_own_theme():
 
 def test_a_group_with_only_some_aliases_present_still_forms_a_theme():
     subjects = [("Atraso de vôo", 1)]
-    groups = [{"aliases": ["Atraso de vôo", "Cancelamento de vôo"], "theme_name": "Voos", "subject_area": "CONSUMIDOR"}]
+    groups = [{
+        "aliases": ["Atraso de vôo", "Cancelamento de vôo"],
+        "theme_name": "Voos", "subject_area": "CONSUMIDOR",
+    }]
 
     themes = build(subjects, groups)
 
