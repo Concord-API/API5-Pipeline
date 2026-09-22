@@ -19,13 +19,16 @@ def cursor(dw_ready):
 def insert_movement(cursor, code):
     cursor.execute(
         "INSERT INTO dw.dim_movement (movement_code, movement_name, outcome_sk) "
-        "SELECT %s, 'Movimento', outcome_sk FROM dw.dim_decision_outcome WHERE outcome_code = 'Neutral'",
+        "SELECT %s, 'Movimento', outcome_sk FROM dw.dim_decision_outcome "
+        "WHERE outcome_code = 'Neutral'",
         (code,),
     )
 
 
 def polarity_of(cursor, code):
-    cursor.execute("SELECT polarity_reference FROM dw.dim_movement WHERE movement_code = %s", (code,))
+    cursor.execute(
+        "SELECT polarity_reference FROM dw.dim_movement WHERE movement_code = %s", (code,)
+    )
     return cursor.fetchone()[0]
 
 
