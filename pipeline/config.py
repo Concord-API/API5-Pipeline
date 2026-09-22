@@ -10,3 +10,14 @@ def database_url() -> str:
     if not value:
         raise ConfigurationError("DATABASE_URL is not set")
     return value
+
+
+def datajud_api_key() -> str:
+    value = os.environ.get("DATAJUD_API_KEY")
+    if not value:
+        raise ConfigurationError("DATAJUD_API_KEY is not set")
+    return value
+
+
+def load_file_path() -> str:
+    return os.environ.get("LOAD_FILE_PATH") or "ratio-load.sql"
