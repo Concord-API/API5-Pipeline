@@ -8,7 +8,9 @@ from pipeline.db import transaction
 def table(postgres_url):
     with psycopg2.connect(postgres_url) as connection, connection.cursor() as cursor:
         cursor.execute("CREATE TABLE marks (id serial PRIMARY KEY)")
-    return postgres_url
+    yield postgres_url
+    with psycopg2.connect(postgres_url) as connection, connection.cursor() as cursor:
+        cursor.execute("DROP TABLE marks")
 
 
 def row_count(dsn):
