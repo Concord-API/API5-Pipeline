@@ -1,4 +1,14 @@
+import json
+import os
+
 from pipeline.theme_area import classify_area
+
+DEFAULT_GROUPS_PATH = os.path.join(os.path.dirname(__file__), "data", "theme_merge_groups.json")
+
+
+def load_groups(path=DEFAULT_GROUPS_PATH):
+    with open(path, encoding="utf-8") as handle:
+        return json.load(handle)
 
 
 def build(subjects, groups):
