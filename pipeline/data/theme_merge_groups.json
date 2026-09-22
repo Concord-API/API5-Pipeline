@@ -1,0 +1,205 @@
+[
+  {
+    "aliases": [
+      "Indenização por Dano Moral",
+      "Indenizaçao por Dano Moral"
+    ],
+    "theme_name": "Indenização por dano moral",
+    "subject_area": "CIVIL"
+  },
+  {
+    "aliases": [
+      "Repetição de indébito",
+      "Repetição do Indébito"
+    ],
+    "theme_name": "Repetição de indébito",
+    "subject_area": "TRIBUTARIO"
+  },
+  {
+    "aliases": [
+      "Planos de Saúde",
+      "Planos de saúde"
+    ],
+    "theme_name": "Planos de saúde",
+    "subject_area": "SAUDE"
+  },
+  {
+    "aliases": [
+      "Licença Prêmio",
+      "Licença-Prêmio"
+    ],
+    "theme_name": "Licença-prêmio",
+    "subject_area": "ADMINISTRATIVO"
+  },
+  {
+    "aliases": [
+      "Intimação",
+      "Intimação / Notificação"
+    ],
+    "theme_name": "Intimação e notificação",
+    "subject_area": "PROCESSUAL"
+  },
+  {
+    "aliases": [
+      "Contratos Bancários",
+      "Bancários"
+    ],
+    "theme_name": "Contratos bancários",
+    "subject_area": "BANCARIO"
+  },
+  {
+    "aliases": [
+      "Despesas Condominiais",
+      "Condomínio"
+    ],
+    "theme_name": "Despesas condominiais",
+    "subject_area": "IMOBILIARIO"
+  },
+  {
+    "aliases": [
+      "Juros/Correção Monetária",
+      "Correção Monetária"
+    ],
+    "theme_name": "Juros e correção monetária",
+    "subject_area": "QUANTUM"
+  },
+  {
+    "aliases": [
+      "Prescrição e Decadência",
+      "Prescrição"
+    ],
+    "theme_name": "Prescrição e decadência",
+    "subject_area": "PROCESSUAL"
+  },
+  {
+    "aliases": [
+      "Tutela de Urgência",
+      "Urgência"
+    ],
+    "theme_name": "Tutela de urgência",
+    "subject_area": "PROCESSUAL"
+  },
+  {
+    "aliases": [
+      "Liquidação / Cumprimento / Execução",
+      "Liquidação"
+    ],
+    "theme_name": "Liquidação e cumprimento de sentença",
+    "subject_area": "PROCESSUAL"
+  },
+  {
+    "aliases": [
+      "Contribuições de Melhoria",
+      "Contribuições"
+    ],
+    "theme_name": "Contribuições e contribuição de melhoria",
+    "subject_area": "TRIBUTARIO"
+  },
+  {
+    "aliases": [
+      "Gratificações Municipais Específicas",
+      "Gratificações Estaduais Específicas"
+    ],
+    "theme_name": "Gratificações específicas de servidor",
+    "subject_area": "ADMINISTRATIVO"
+  },
+  {
+    "aliases": [
+      "Tratamento médico-hospitalar",
+      "Tratamento Médico-Hospitalar",
+      "Serviços Hospitalares",
+      "Assistência Médico-Hospitalar"
+    ],
+    "theme_name": "Tratamento e assistência médico-hospitalar",
+    "subject_area": "SAUDE"
+  },
+  {
+    "aliases": [
+      "Práticas Abusivas",
+      "Cláusulas Abusivas"
+    ],
+    "theme_name": "Práticas e cláusulas abusivas",
+    "subject_area": "CONSUMIDOR"
+  },
+  {
+    "aliases": [
+      "Substituição do Produto",
+      "Produto Impróprio"
+    ],
+    "theme_name": "Vício do produto",
+    "subject_area": "CONSUMIDOR"
+  },
+  {
+    "aliases": [
+      "Protesto Indevido de Título",
+      "Sustação de Protesto"
+    ],
+    "theme_name": "Protesto indevido de título",
+    "subject_area": "CIVIL"
+  },
+  {
+    "aliases": [
+      "Crimes contra a Flora",
+      "Crimes contra a Fauna"
+    ],
+    "theme_name": "Crimes ambientais",
+    "subject_area": "AMBIENTAL"
+  },
+  {
+    "aliases": [
+      "Incapacidade Laborativa Temporária",
+      "Incapacidade Laborativa Permanente",
+      "Incapacidade Laborativa Parcial"
+    ],
+    "theme_name": "Incapacidade laborativa",
+    "subject_area": "PREVIDENCIARIO"
+  },
+  {
+    "aliases": [
+      "Aposentadoria por Tempo de Contribuição (Art. 55/6)",
+      "Aposentadoria por Tempo de Serviço (Art. 52/4)"
+    ],
+    "theme_name": "Aposentadoria por tempo de contribuição",
+    "subject_area": "PREVIDENCIARIO"
+  },
+  {
+    "aliases": [
+      "Honorários Advocatícios",
+      "Honorários Advocatícios em Execução Contra a Fazenda Pública"
+    ],
+    "theme_name": "Honorários advocatícios",
+    "subject_area": "PROCESSUAL"
+  },
+  {
+    "aliases": [
+      "Violação dos Princípios Administrativos",
+      "Improbidade Administrativa"
+    ],
+    "theme_name": "Improbidade administrativa",
+    "subject_area": "ADMINISTRATIVO"
+  },
+  {
+    "aliases": [
+      "Exclusão - ICMS",
+      "Cálculo de ICMS &quot;por dentro&quot;"
+    ],
+    "theme_name": "Base de cálculo do ICMS",
+    "subject_area": "TRIBUTARIO"
+  },
+  {
+    "aliases": [
+      "Fornecimento de Medicamentos",
+      "Fornecimento de medicamentos"
+    ],
+    "theme_name": "Fornecimento de medicamentos",
+    "subject_area": "SAUDE"
+  },
+  {
+    "aliases": [
+      "Fornecimento de Água",
+      "Água e/ou Esgoto"
+    ],
+    "theme_name": "Fornecimento de água e esgoto",
+    "subject_area": "CONSUMIDOR"
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "fonte": "fixture de teste",
+  "baixado_em": "2026-01-01",
+  "classes_civel": {
+    "raiz": {"2": "PROCESSO CÍVEL E DO TRABALHO"},
+    "codigos": [7, 436],
+    "nomes": {"7": "Procedimento Comum Cível", "436": "Execução de Título Extrajudicial"}
+  },
+  "classes_penal": {
+    "raizes": {"268": "PROCESSO CRIMINAL"},
+    "codigos": [283]
+  },
+  "assuntos_penal": {
+    "raizes": {"287": "DIREITO PENAL"},
+    "codigos": [3568, 3593]
+  },
+  "areas": {
+    "899": {"nome": "DIREITO CIVIL", "codigos": [1127, 1128]},
+    "9985": {"nome": "DIREITO DO CONSUMIDOR", "codigos": [7771]}
+  },
+  "assunto_area": {
+    "1127": "DIREITO CIVIL",
+    "1128": "DIREITO CIVIL",
+    "7771": "DIREITO DO CONSUMIDOR"
+  }
+}

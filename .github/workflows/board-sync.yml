@@ -1,0 +1,46 @@
+name: Board sync
+
+on:
+  create:
+  pull_request:
+    branches: ['us*']
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: board-sync-${{ github.event.pull_request.head.ref || github.event.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    name: Board sync script tests
+    if: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Run the board sync tests
+        run: bash .github/scripts/tests/board-sync.test.sh
+
+  sync:
+    name: Board sync
+    if: ${{ (github.event_name == 'create' && github.event.ref_type == 'branch') || (github.event_name == 'pull_request' && github.event.action != 'synchronize') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.BOARD_TOKEN }}
+      EVENT: ${{ github.event_name == 'create' && 'branch' || (github.event.action == 'closed' && 'closed' || 'opened') }}
+      BRANCH: ${{ github.event.pull_request.head.ref || github.event.ref }}
+      MERGED: ${{ github.event.pull_request.merged == true }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Move the task card
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::BOARD_TOKEN is not available, the board was not updated"
+            exit 0
+          fi
+          bash .github/scripts/board-sync.sh
