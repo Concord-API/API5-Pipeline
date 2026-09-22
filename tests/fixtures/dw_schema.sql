@@ -57,6 +57,32 @@ CREATE TABLE dw.dim_subject (
     tpu_area text
 );
 
+CREATE TABLE dw.dim_theme (
+    theme_sk bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    theme_name text NOT NULL UNIQUE,
+    subject_area text,
+    label_origin text NOT NULL DEFAULT 'llm_curated',
+    embedding_model text,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    tpu_area text,
+    theme_key bigint NOT NULL,
+    CONSTRAINT dim_theme_subject_area_check CHECK (
+        subject_area IS NULL
+        OR subject_area IN (
+            'ADMINISTRATIVO', 'AMBIENTAL', 'BANCARIO', 'CIVIL', 'CONSUMIDOR', 'EMPRESARIAL', 'FAMILIA',
+            'IMOBILIARIO', 'PREVIDENCIARIO', 'PROCESSUAL', 'QUANTUM', 'SAUDE', 'TRABALHISTA', 'TRIBUTARIO'
+        )
+    )
+);
+
+CREATE UNIQUE INDEX idx_dim_theme_key ON dw.dim_theme (theme_key);
+
+CREATE TABLE dw.bridge_theme_subject (
+    theme_sk bigint NOT NULL REFERENCES dw.dim_theme (theme_sk) ON DELETE CASCADE,
+    subject_sk bigint NOT NULL REFERENCES dw.dim_subject (subject_sk),
+    PRIMARY KEY (theme_sk, subject_sk)
+);
+
 CREATE TABLE dw.bridge_case_subject (
     case_sk bigint NOT NULL REFERENCES dw.dim_case (case_sk),
     subject_sk bigint NOT NULL REFERENCES dw.dim_subject (subject_sk),
