@@ -31,6 +31,25 @@ CREATE TABLE dw.dim_decision_outcome (
     counts_in_metric boolean NOT NULL DEFAULT true
 );
 
+CREATE TABLE dw.dim_case (
+    case_sk bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    case_number text NOT NULL UNIQUE,
+    court_sk smallint NOT NULL REFERENCES dw.dim_court (court_sk),
+    case_class_sk smallint REFERENCES dw.dim_case_class (case_class_sk),
+    court_level text NOT NULL,
+    secrecy_level smallint NOT NULL DEFAULT 0,
+    filed_at date,
+    source text NOT NULL,
+    extracted_at timestamp with time zone NOT NULL,
+    case_number_formatted text,
+    source_link text,
+    source_link_type text,
+    CONSTRAINT dim_case_court_level_check CHECK (court_level IN ('First', 'Second', 'SpecialCourt', 'AppealPanel')),
+    CONSTRAINT dim_case_secrecy_level_check CHECK (secrecy_level BETWEEN 0 AND 5),
+    CONSTRAINT dim_case_source_link_pair_check CHECK ((source_link IS NULL) = (source_link_type IS NULL)),
+    CONSTRAINT dim_case_source_link_type_check CHECK (source_link_type IS NULL OR source_link_type IN ('direto', 'portal'))
+);
+
 CREATE TABLE dw.dim_movement (
     movement_sk smallint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     movement_code integer NOT NULL UNIQUE,
