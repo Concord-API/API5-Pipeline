@@ -125,3 +125,24 @@ CREATE TABLE dw.fact_case_event (
     extracted_at timestamp with time zone NOT NULL,
     natural_key text NOT NULL UNIQUE
 );
+
+CREATE MATERIALIZED VIEW dw.case_current_result AS
+SELECT DISTINCT ON (f.case_sk)
+    f.case_sk,
+    f.event_sk,
+    m.outcome_sk,
+    m.polarity_reference,
+    cc.claimant_type,
+    f.date_sk,
+    f.court_sk,
+    f.judging_body_sk
+FROM dw.fact_case_event f
+JOIN dw.dim_movement m ON m.movement_sk = f.movement_sk
+JOIN dw.dim_case c ON c.case_sk = f.case_sk
+LEFT JOIN dw.dim_case_class cc ON cc.case_class_sk = c.case_class_sk
+JOIN dw.dim_decision_outcome o ON o.outcome_sk = m.outcome_sk
+WHERE o.counts_in_metric AND m.code_verified
+ORDER BY f.case_sk, f.occurred_at DESC, f.event_sk DESC
+WITH NO DATA;
+
+CREATE UNIQUE INDEX idx_case_current_result_case ON dw.case_current_result (case_sk);
