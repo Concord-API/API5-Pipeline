@@ -1,5 +1,3 @@
-import os
-
 import psycopg2
 import pytest
 
@@ -10,19 +8,6 @@ from pipeline.dw_reference import (
     seed_courts,
     seed_outcomes,
 )
-from pipeline.staging_schema import ensure as ensure_staging
-
-FIXTURE_SQL = os.path.join(os.path.dirname(__file__), "fixtures", "dw_schema.sql")
-
-
-@pytest.fixture(scope="module")
-def dw_ready(postgres_url):
-    with open(FIXTURE_SQL, encoding="utf-8") as handle:
-        ddl = handle.read()
-    with psycopg2.connect(postgres_url) as connection, connection.cursor() as cursor:
-        cursor.execute(ddl)
-        ensure_staging(cursor)
-    return postgres_url
 
 
 @pytest.fixture
