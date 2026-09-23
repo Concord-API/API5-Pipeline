@@ -8,11 +8,28 @@ def table_names(cursor):
     return [row[0] for row in cursor.fetchall()]
 
 
-def matview_names(cursor):
+def matview_dependencies(cursor):
     cursor.execute(
-        "SELECT matviewname FROM pg_matviews WHERE schemaname = 'dw' ORDER BY matviewname"
+        """
+        SELECT DISTINCT dependent.relname, source.relname
+        FROM pg_depend d
+        JOIN pg_rewrite r ON r.oid = d.objid
+        JOIN pg_class dependent ON dependent.oid = r.ev_class
+        JOIN pg_class source ON source.oid = d.refobjid
+        JOIN pg_namespace n ON n.oid = dependent.relnamespace
+        WHERE n.nspname = 'dw'
+          AND dependent.relkind = 'm'
+          AND source.relkind = 'm'
+          AND dependent.oid <> source.oid
+        """
     )
-    return [row[0] for row in cursor.fetchall()]
+    return cursor.fetchall()
+
+
+def matview_names(cursor):
+    cursor.execute("SELECT matviewname FROM pg_matviews WHERE schemaname = 'dw'")
+    names = [row[0] for row in cursor.fetchall()]
+    return refresh_order(names, matview_dependencies(cursor))
 
 
 
