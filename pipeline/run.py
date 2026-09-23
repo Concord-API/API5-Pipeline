@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from pipeline import (
     dw_case,
     dw_case_links,
@@ -7,6 +9,7 @@ from pipeline import (
     dw_subject,
     load_file,
     staging,
+    strength_config,
     theme_build,
     theme_load,
     theme_registry,
@@ -66,5 +69,6 @@ def run(cursor, dsn, tpu, groups, output_path, runner=None):
     transform_all(cursor, tpu)
     load_dimensions(cursor, tpu)
     load_themes(cursor, groups)
+    strength_config.seed(cursor, datetime.now(timezone.utc).year)
     cursor.connection.commit()
     return load_file.generate(cursor, dsn, output_path, runner=runner)
