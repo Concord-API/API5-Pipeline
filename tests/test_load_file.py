@@ -1,16 +1,20 @@
 import psycopg2
 import pytest
 
-from pipeline.load_file import build, matview_names, table_names
+from pipeline.load_file import build, matview_names, refresh_order, table_names
 
 
 @pytest.fixture
 def cursor(dw_ready):
     with psycopg2.connect(dw_ready) as connection, connection.cursor() as cur:
-        cur.execute("DROP MATERIALIZED VIEW IF EXISTS dw.a_test_view")
-        cur.execute("CREATE MATERIALIZED VIEW dw.a_test_view AS SELECT 1 AS n")
+        cur.execute("DROP MATERIALIZED VIEW IF EXISTS dw.z_source CASCADE")
+        cur.execute("CREATE MATERIALIZED VIEW dw.z_source AS SELECT 1 AS n WITH NO DATA")
+        cur.execute(
+            "CREATE MATERIALIZED VIEW dw.a_dependent AS SELECT n FROM dw.z_source WITH NO DATA"
+        )
         yield cur
-        cur.execute("DROP MATERIALIZED VIEW IF EXISTS dw.a_test_view")
+        connection.rollback()
+        cur.execute("DROP MATERIALIZED VIEW IF EXISTS dw.z_source CASCADE")
         connection.commit()
 
 
@@ -19,13 +23,13 @@ def test_table_names_lists_the_dw_tables(cursor):
 
     assert "dim_court" in tables
     assert "fact_case_event" in tables
-    assert "a_test_view" not in tables
+    assert "a_dependent" not in tables
 
 
 def test_matview_names_lists_only_materialized_views(cursor):
     matviews = matview_names(cursor)
 
-    assert "a_test_view" in matviews
+    assert "a_dependent" in matviews
     assert "dim_court" not in matviews
 
 
@@ -60,3 +64,35 @@ def test_build_without_matviews_has_no_refresh():
     script = build(["dim_court"], [], "-- dump")
 
     assert "REFRESH" not in script
+
+
+def test_refresh_order_puts_each_view_after_the_view_it_reads():
+    order = refresh_order(["a", "b", "c"], [("a", "b"), ("b", "c")])
+
+    assert order == ["c", "b", "a"]
+
+
+def test_refresh_order_keeps_independent_views_alphabetical():
+    order = refresh_order(["theme_summary", "case_current_result"], [])
+
+    assert order == ["case_current_result", "theme_summary"]
+
+
+def test_refresh_order_handles_a_view_read_by_two_others():
+    order = refresh_order(["a", "b", "c", "d"], [("b", "a"), ("c", "a"), ("d", "b"), ("d", "c")])
+
+    assert order == ["a", "b", "c", "d"]
+
+
+def test_matview_names_lists_a_view_after_the_view_it_reads(cursor):
+    matviews = matview_names(cursor)
+
+    assert matviews.index("z_source") < matviews.index("a_dependent")
+
+
+def test_refreshing_in_the_listed_order_populates_dependent_views(cursor):
+    for view in matview_names(cursor):
+        cursor.execute(f"REFRESH MATERIALIZED VIEW dw.{view}")
+
+    cursor.execute("SELECT n FROM dw.a_dependent")
+    assert cursor.fetchall() == [(1,)]
