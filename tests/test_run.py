@@ -6,6 +6,7 @@ import psycopg2
 
 from pipeline.raw_schema import ensure as ensure_raw
 from pipeline.run import run
+from pipeline.search_synonym import load as load_search_synonyms
 from pipeline.theme_registry import ensure as ensure_theme_registry
 from pipeline.tpu import load as load_tpu
 
@@ -52,6 +53,7 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
         )
         cursor.execute("TRUNCATE staging.case_event")
         cursor.execute("TRUNCATE dw.strength_config")
+        cursor.execute("TRUNCATE dw.search_synonym")
         ensure_theme_registry(cursor)
         cursor.execute("TRUNCATE etl.theme_registry RESTART IDENTITY CASCADE")
         ensure_raw(cursor)
@@ -69,6 +71,8 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
     assert "COPY dw.dim_theme" in content
     assert "0000001-00.2024.8.26.0100" in content
     assert "COPY dw.strength_config" in content
+    assert "COPY dw.search_synonym" in content
+    assert "negativado\tinclusao indevida cadastro inadimplentes" in content
 
     with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
         cursor.execute("REFRESH MATERIALIZED VIEW dw.case_current_result")
@@ -80,3 +84,5 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
         assert cursor.fetchone() == (1,)
         cursor.execute("SELECT methodology_version, reference_year FROM dw.strength_config")
         assert cursor.fetchall() == [("1.0", datetime.now(timezone.utc).year)]
+        cursor.execute("SELECT count(*) FROM dw.search_synonym")
+        assert cursor.fetchone() == (len(load_search_synonyms()),)
