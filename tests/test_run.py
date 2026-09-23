@@ -51,6 +51,7 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
             "RESTART IDENTITY CASCADE"
         )
         cursor.execute("TRUNCATE staging.case_event")
+        cursor.execute("TRUNCATE dw.strength_config")
         ensure_theme_registry(cursor)
         cursor.execute("TRUNCATE etl.theme_registry RESTART IDENTITY CASCADE")
         ensure_raw(cursor)
@@ -67,6 +68,7 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
     assert "COPY dw.dim_case" in content
     assert "COPY dw.dim_theme" in content
     assert "0000001-00.2024.8.26.0100" in content
+    assert "COPY dw.strength_config" in content
 
     with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
         cursor.execute("REFRESH MATERIALIZED VIEW dw.case_current_result")
@@ -76,3 +78,5 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
         assert cursor.fetchall() == [("Contratos",)]
         cursor.execute("SELECT count(*) FROM dw.fact_case_event")
         assert cursor.fetchone() == (1,)
+        cursor.execute("SELECT methodology_version, reference_year FROM dw.strength_config")
+        assert cursor.fetchall() == [("1.0", datetime.now(timezone.utc).year)]
