@@ -144,6 +144,12 @@ CREATE TABLE dw.strength_config (
     CONSTRAINT strength_config_min_judged_for_percentage_check CHECK (min_judged_for_percentage >= 1)
 );
 
+CREATE TABLE dw.search_synonym (
+    term text PRIMARY KEY,
+    expands_to text NOT NULL,
+    note text
+);
+
 CREATE MATERIALIZED VIEW dw.case_current_result AS
 SELECT DISTINCT ON (f.case_sk)
     f.case_sk,
