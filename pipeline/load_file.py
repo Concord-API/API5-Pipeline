@@ -15,6 +15,22 @@ def matview_names(cursor):
     return [row[0] for row in cursor.fetchall()]
 
 
+
+def refresh_order(names, dependencies):
+    pending = {name: set() for name in names}
+    for dependent, source in dependencies:
+        if dependent in pending and source in pending:
+            pending[dependent].add(source)
+    order = []
+    while pending:
+        ready = sorted(name for name, sources in pending.items() if not sources)
+        order.extend(ready)
+        for name in ready:
+            del pending[name]
+        for sources in pending.values():
+            sources.difference_update(ready)
+    return order
+
 def build(tables, matviews, dump_sql):
     qualified = ", ".join(f"dw.{table}" for table in tables)
     parts = [
