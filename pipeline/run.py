@@ -8,6 +8,7 @@ from pipeline import (
     dw_reference,
     dw_subject,
     load_file,
+    search_synonym,
     staging,
     strength_config,
     theme_build,
@@ -70,5 +71,6 @@ def run(cursor, dsn, tpu, groups, output_path, runner=None):
     load_dimensions(cursor, tpu)
     load_themes(cursor, groups)
     strength_config.seed(cursor, datetime.now(timezone.utc).year)
+    search_synonym.seed(cursor, search_synonym.load())
     cursor.connection.commit()
     return load_file.generate(cursor, dsn, output_path, runner=runner)
