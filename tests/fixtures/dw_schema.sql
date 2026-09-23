@@ -126,6 +126,24 @@ CREATE TABLE dw.fact_case_event (
     natural_key text NOT NULL UNIQUE
 );
 
+CREATE TABLE dw.strength_config (
+    id smallint PRIMARY KEY DEFAULT 1,
+    weight_agreement real NOT NULL DEFAULT 0.45,
+    weight_volume real NOT NULL DEFAULT 0.25,
+    weight_coverage real NOT NULL DEFAULT 0.20,
+    weight_recency real NOT NULL DEFAULT 0.10,
+    volume_saturation integer NOT NULL DEFAULT 300,
+    coverage_courts smallint NOT NULL DEFAULT 3,
+    reference_year smallint NOT NULL DEFAULT EXTRACT(year FROM now())::smallint,
+    methodology_version text NOT NULL,
+    min_judged_for_percentage smallint NOT NULL DEFAULT 2,
+    CONSTRAINT strength_config_check CHECK (
+        abs(weight_agreement + weight_volume + weight_coverage + weight_recency - 1.0) < 0.001
+    ),
+    CONSTRAINT strength_config_id_check CHECK (id = 1),
+    CONSTRAINT strength_config_min_judged_for_percentage_check CHECK (min_judged_for_percentage >= 1)
+);
+
 CREATE MATERIALIZED VIEW dw.case_current_result AS
 SELECT DISTINCT ON (f.case_sk)
     f.case_sk,
