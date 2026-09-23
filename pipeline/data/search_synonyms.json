@@ -1,0 +1,72 @@
+[
+  {
+    "term": "negativacao",
+    "expands_to": "inclusao indevida cadastro inadimplentes",
+    "note": "jargão forense ausente da TPU; fase de descoberta"
+  },
+  {
+    "term": "negativado",
+    "expands_to": "inclusao indevida cadastro inadimplentes",
+    "note": "jargão forense ausente da TPU; fase de descoberta"
+  },
+  {
+    "term": "negativada",
+    "expands_to": "inclusao indevida cadastro inadimplentes",
+    "note": "flexão feminina de negativado"
+  },
+  {
+    "term": "serasa",
+    "expands_to": "cadastro inadimplentes",
+    "note": "nome de bureau usado como sinônimo; fase de descoberta"
+  },
+  {
+    "term": "spc",
+    "expands_to": "cadastro inadimplentes",
+    "note": "nome de bureau usado como sinônimo; fase de descoberta"
+  },
+  {
+    "term": "scpc",
+    "expands_to": "cadastro inadimplentes",
+    "note": "nome de bureau usado como sinônimo, como spc"
+  },
+  {
+    "term": "calote",
+    "expands_to": "inadimplemento",
+    "note": "termo leigo para o tema Inadimplemento"
+  },
+  {
+    "term": "aviao",
+    "expands_to": "transporte aereo",
+    "note": "termo leigo para o tema Transporte aéreo; tela inicial sugere atraso de voo"
+  },
+  {
+    "term": "aerea",
+    "expands_to": "transporte aereo",
+    "note": "companhia aérea, termo leigo para o tema Transporte aéreo"
+  },
+  {
+    "term": "mala",
+    "expands_to": "extravio bagagem",
+    "note": "termo leigo para o tema Extravio de bagagem"
+  },
+  {
+    "term": "convenio",
+    "expands_to": "plano saude",
+    "note": "convênio médico, termo leigo para o tema Plano de saúde"
+  },
+  {
+    "term": "luz",
+    "expands_to": "fornecimento energia eletrica",
+    "note": "corte de luz, termo leigo para o tema Fornecimento de energia elétrica"
+  },
+  {
+    "term": "remedio",
+    "expands_to": "fornecimento medicamentos",
+    "note": "termo leigo para o tema Fornecimento de medicamentos"
+  },
+  {
+    "term": "aluguel",
+    "expands_to": "locacao imovel",
+    "note": "termo leigo para o tema Locação de imóvel"
+  }
+]
