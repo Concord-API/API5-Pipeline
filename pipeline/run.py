@@ -8,6 +8,7 @@ from pipeline import (
     dw_movement_polarity,
     dw_reference,
     dw_subject,
+    integrity,
     load_file,
     search_synonym,
     staging,
@@ -77,5 +78,6 @@ def run(cursor, dsn, tpu, groups, output_path, runner=None):
     strength_config.seed(cursor, today.year)
     search_synonym.seed(cursor, search_synonym.load())
     theme_narrative.generate(cursor, today)
+    integrity.assert_clean(cursor, tpu)
     cursor.connection.commit()
     return load_file.generate(cursor, dsn, output_path, runner=runner)
