@@ -6,6 +6,7 @@ from testcontainers.postgres import PostgresContainer
 
 from pipeline.staging_schema import ensure as ensure_staging
 
+EXTENSIONS = "CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT EXISTS pg_trgm;"
 DW_SCHEMA_SQL = os.path.join(os.path.dirname(__file__), "fixtures", "dw_schema.sql")
 
 
@@ -25,6 +26,7 @@ def dw_ready(postgres_url):
     with open(DW_SCHEMA_SQL, encoding="utf-8") as handle:
         ddl = handle.read()
     with psycopg2.connect(postgres_url) as connection, connection.cursor() as cursor:
+        cursor.execute(EXTENSIONS)
         cursor.execute(ddl)
         ensure_staging(cursor)
     return postgres_url
