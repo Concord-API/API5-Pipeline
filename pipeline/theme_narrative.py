@@ -21,7 +21,8 @@ SELECT
         s.appeal_upheld_count::numeric / nullif(s.appeal_upheld_count + s.appeal_rejected_count, 0),
         4
     ) AS appeal_ratio,
-    cfg.methodology_version
+    cfg.methodology_version,
+    cfg.min_judged_for_percentage AS percentage_floor
 FROM dw.theme_summary s
 JOIN dw.theme_strength ts ON ts.theme_sk = s.theme_sk
 CROSS JOIN dw.strength_config cfg
@@ -29,8 +30,26 @@ WHERE s.judged_case_count > 0 AND ts.judged > 0
 ORDER BY s.theme_sk
 """
 
+def _unit(n):
+    return "decisão" if n == 1 else "decisões"
+
+
 def _ratio(value, n):
-    return {"ratio": float(value), "n": n, "unit": "decisão" if n == 1 else "decisões"}
+    return {"ratio": float(value), "n": n, "unit": _unit(n)}
+
+
+def _count(n):
+    return {"count": n, "unit": _unit(n)}
+
+
+def _judged(n):
+    return "julgada" if n == 1 else "julgadas"
+
+
+def _family(opening, count_opening, ratio, n, floor):
+    if n < floor:
+        return [{"text": count_opening}, _count(n), {"text": f" {_judged(n)}."}]
+    return [{"text": opening}, _ratio(ratio, n), {"text": "."}]
 
 
 def _courts_and_period(facts):
@@ -45,24 +64,38 @@ def _courts_and_period(facts):
 
 
 def compose(facts):
-    lead = [
-        {"text": "Em "},
-        _ratio(facts["upheld_ratio"], facts["judged"]),
-        {"text": f" julgadas, houve {facts['polarity_label']}."},
-    ]
+    floor = facts["percentage_floor"]
+    judged, label = facts["judged"], facts["polarity_label"]
+    if judged < floor:
+        lead = [{"text": "Há "}, _count(judged), {"text": f" {_judged(judged)}, com {label}."}]
+    else:
+        lead = [
+            {"text": "Em "},
+            _ratio(facts["upheld_ratio"], judged),
+            {"text": f" julgadas, houve {label}."},
+        ]
     body = [{"text": _courts_and_period(facts)}]
     last_decision = facts["last_decision_date"]
     if last_decision is not None:
         body.append({"text": f" A última decisão é de {last_decision:%d.%m.%Y}."})
     if facts["merit_judged"] > 0 and facts["appeal_judged"] > 0:
         body.extend(
-            [
-                {"text": " No mérito, houve acolhimento em "},
-                _ratio(facts["merit_ratio"], facts["merit_judged"]),
-                {"text": ". Nos recursos, houve provimento em "},
-                _ratio(facts["appeal_ratio"], facts["appeal_judged"]),
-                {"text": "."},
-            ]
+            _family(
+                " No mérito, houve acolhimento em ",
+                " No mérito, há ",
+                facts["merit_ratio"],
+                facts["merit_judged"],
+                floor,
+            )
+        )
+        body.extend(
+            _family(
+                " Nos recursos, houve provimento em ",
+                " Nos recursos, há ",
+                facts["appeal_ratio"],
+                facts["appeal_judged"],
+                floor,
+            )
         )
     return lead, body
 
