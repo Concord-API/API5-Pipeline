@@ -10,6 +10,11 @@ EXTENSIONS = "CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT E
 DW_SCHEMA_SQL = os.path.join(os.path.dirname(__file__), "fixtures", "dw_schema.sql")
 
 
+@pytest.fixture(autouse=True)
+def isolated_env_file(tmp_path, monkeypatch):
+    monkeypatch.setattr("pipeline.config.ENV_FILE", tmp_path / ".env")
+
+
 @pytest.fixture(scope="session")
 def postgres_container():
     with PostgresContainer("postgres:16") as container:

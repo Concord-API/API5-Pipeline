@@ -86,3 +86,13 @@ def test_main_fails_clearly_without_the_database_url(monkeypatch, capsys):
 
     assert main(groups=[], encoder=fake_encoder) == 1
     assert "DATABASE_URL is not set" in capsys.readouterr().err
+
+
+def test_main_reads_the_database_url_from_the_env_file(subjects, monkeypatch, tmp_path, capsys):
+    env_file = tmp_path / ".env"
+    env_file.write_text(f"DATABASE_URL={subjects}\n")
+    monkeypatch.setattr("pipeline.config.ENV_FILE", env_file)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    assert main(groups=[], encoder=fake_encoder) == 0
+    assert "Plano de Saúde | Planos de Saúde" in capsys.readouterr().out
