@@ -176,3 +176,24 @@ def test_fails_clearly_when_the_integrity_fails(
     assert exit_code == 1
     assert "judged theme without text" in capsys.readouterr().err
     assert not environment.exists()
+
+
+def test_reads_the_settings_from_the_env_file(
+    clean_database, container_runner, monkeypatch, tmp_path
+):
+    output_path = tmp_path / "from-env-file.sql"
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        f"DATABASE_URL={clean_database}\nDATAJUD_API_KEY=key-from-file\n"
+        f"LOAD_FILE_PATH={output_path.as_posix()}\n"
+    )
+    monkeypatch.setattr("pipeline.config.ENV_FILE", env_file)
+    for name in ("DATABASE_URL", "DATAJUD_API_KEY", "LOAD_FILE_PATH"):
+        monkeypatch.delenv(name, raising=False)
+    factory = SessionFactory()
+
+    exit_code = main([], session_factory=factory, runner=container_runner)
+
+    assert exit_code == 0
+    assert factory.keys == ["key-from-file"]
+    assert output_path.exists()
