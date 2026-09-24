@@ -57,6 +57,7 @@ def subject_case_counts(cursor):
 
 
 def main(groups=None, encoder=local_encoder):
+    config.load_env()
     try:
         dsn = config.database_url()
     except config.ConfigurationError as error:

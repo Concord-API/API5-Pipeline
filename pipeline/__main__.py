@@ -28,6 +28,7 @@ def assert_dw_exists(cursor):
 
 def main(argv=None, session_factory=harvest.new_session, runner=None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    config.load_env()
     try:
         dsn = config.database_url()
         api_key = None if args.skip_harvest else config.datajud_api_key()
