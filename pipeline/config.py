@@ -1,8 +1,17 @@
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+ENV_FILE = Path(".env")
 
 
 class ConfigurationError(Exception):
     pass
+
+
+def load_env(path=None):
+    load_dotenv(ENV_FILE if path is None else path, override=False)
 
 
 def database_url() -> str:
