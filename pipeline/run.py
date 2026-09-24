@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from pipeline import (
     dw_case,
     dw_case_links,
+    dw_date,
     dw_fact,
     dw_movement_polarity,
     dw_reference,
@@ -36,7 +37,7 @@ def transform_all(cursor, tpu, movement_names=None):
     return len(rows)
 
 
-def load_dimensions(cursor, tpu):
+def load_dimensions(cursor, tpu, calendar_until):
     dw_reference.seed_courts(cursor)
     dw_reference.seed_outcomes(cursor)
     dw_reference.seed_verified_movements(cursor)
@@ -48,6 +49,7 @@ def load_dimensions(cursor, tpu):
     dw_subject.set_tpu_areas(cursor, tpu)
     dw_subject.assert_no_penal_subjects(cursor, tpu)
     dw_subject.load_bridge(cursor)
+    dw_date.seed(cursor, calendar_until)
     dw_fact.load(cursor)
     dw_movement_polarity.set_polarity(cursor)
     dw_case_links.format_case_numbers(cursor)
@@ -68,10 +70,10 @@ def load_themes(cursor, groups):
 
 
 def run(cursor, dsn, tpu, groups, output_path, runner=None):
-    transform_all(cursor, tpu)
-    load_dimensions(cursor, tpu)
-    load_themes(cursor, groups)
     today = datetime.now(timezone.utc).date()
+    transform_all(cursor, tpu)
+    load_dimensions(cursor, tpu, today.year + 1)
+    load_themes(cursor, groups)
     strength_config.seed(cursor, today.year)
     search_synonym.seed(cursor, search_synonym.load())
     theme_narrative.generate(cursor, today)
