@@ -32,7 +32,7 @@ def test_area_raises_a_clear_error_for_an_unknown_code(tpu):
 
 
 def test_datajud_civil_query_includes_civil_classes_and_the_area_subjects(tpu):
-    query = datajud_civil_query(tpu, "899")
+    query = datajud_civil_query(tpu, "899", decision_codes=[219])
 
     filters = query["bool"]["filter"]
     assert {"terms": {"classe.codigo": [7, 436]}} in filters
@@ -40,6 +40,12 @@ def test_datajud_civil_query_includes_civil_classes_and_the_area_subjects(tpu):
 
 
 def test_datajud_civil_query_excludes_every_penal_subject(tpu):
-    query = datajud_civil_query(tpu, "899")
+    query = datajud_civil_query(tpu, "899", decision_codes=[219])
 
     assert query["bool"]["must_not"] == [{"terms": {"assuntos.codigo": [3568, 3593]}}]
+
+
+def test_datajud_civil_query_requires_one_of_the_decision_movements(tpu):
+    query = datajud_civil_query(tpu, "899", decision_codes=[219, 220])
+
+    assert {"terms": {"movimentos.codigo": [219, 220]}} in query["bool"]["filter"]
