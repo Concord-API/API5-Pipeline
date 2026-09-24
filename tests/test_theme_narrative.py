@@ -18,6 +18,7 @@ FACTS = {
     "merit_ratio": 0.9861,
     "appeal_judged": 0,
     "appeal_ratio": None,
+    "percentage_floor": 2,
 }
 
 
@@ -69,10 +70,55 @@ def test_the_body_separates_merit_and_appeal_when_both_exist():
     assert body[2:] == [
         {"text": " No mérito, houve acolhimento em "},
         {"ratio": 0.9861, "n": 144, "unit": "decisões"},
-        {"text": ". Nos recursos, houve provimento em "},
+        {"text": "."},
+        {"text": " Nos recursos, houve provimento em "},
         {"ratio": 0.25, "n": 12, "unit": "decisões"},
         {"text": "."},
     ]
+
+
+def test_the_lead_writes_the_count_below_the_percentage_floor():
+    facts = {**FACTS, "judged": 1, "upheld_ratio": 1}
+
+    lead, _ = compose(facts)
+
+    assert lead == [
+        {"text": "Há "},
+        {"count": 1, "unit": "decisão"},
+        {"text": " julgada, com acolhimento da pretensão do autor."},
+    ]
+
+
+def test_the_lead_keeps_the_percentage_at_the_floor():
+    facts = {**FACTS, "judged": 2, "upheld_ratio": 0.5}
+
+    lead, _ = compose(facts)
+
+    assert lead[1] == {"ratio": 0.5, "n": 2, "unit": "decisões"}
+
+
+def test_the_floor_applies_to_each_family_on_its_own():
+    facts = {**FACTS, "merit_judged": 30, "merit_ratio": 0.7, "appeal_judged": 1, "appeal_ratio": 1}
+
+    _, body = compose(facts)
+
+    assert body[2:] == [
+        {"text": " No mérito, houve acolhimento em "},
+        {"ratio": 0.7, "n": 30, "unit": "decisões"},
+        {"text": "."},
+        {"text": " Nos recursos, há "},
+        {"count": 1, "unit": "decisão"},
+        {"text": " julgada."},
+    ]
+
+
+def test_no_percentage_is_written_over_a_single_decision():
+    facts = {**FACTS, "judged": 1, "upheld_ratio": 1, "merit_judged": 1, "merit_ratio": 1,
+             "appeal_judged": 1, "appeal_ratio": 1}
+
+    lead, body = compose(facts)
+
+    assert not [segment for segment in lead + body if "ratio" in segment]
 
 
 SEED = """
@@ -154,6 +200,15 @@ def test_generating_twice_keeps_one_text_per_theme(cursor):
     rows = narratives(cursor)
     assert [row[0] for row in rows] == [1]
     assert rows[0][5] == date(2026, 9, 24)
+
+
+def test_reads_the_percentage_floor_from_the_load_database(cursor):
+    cursor.execute("UPDATE dw.strength_config SET min_judged_for_percentage = 5")
+
+    generate(cursor, date(2026, 9, 23))
+
+    [(_, lead, *_)] = narratives(cursor)
+    assert lead[1] == {"count": 3, "unit": "decisões"}
 
 
 def test_stores_the_segments_as_json(cursor):
