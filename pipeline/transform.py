@@ -3,7 +3,14 @@ from datetime import datetime, timezone
 
 from pipeline.tpu import civil_class_codes, penal_subject_codes
 
-COURT_LEVEL_MAP = {"G1": "First", "G2": "Second", "GRAU_UNICO": "Superior", "GR": "Second"}
+COURT_LEVEL_MAP = {
+    "G1": "First",
+    "G2": "Second",
+    "JE": "SpecialCourt",
+    "TR": "AppealPanel",
+    "GRAU_UNICO": "Superior",
+    "GR": "Second",
+}
 
 
 def map_court_level(grau):

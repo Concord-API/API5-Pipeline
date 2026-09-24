@@ -3,7 +3,7 @@ import sys
 
 import psycopg2
 
-from pipeline import config, harvest, theme_build, tpu
+from pipeline import config, harvest, integrity, theme_build, tpu
 from pipeline.raw_schema import ensure as ensure_raw
 from pipeline.run import run
 
@@ -49,7 +49,7 @@ def main(argv=None, session_factory=harvest.new_session, runner=None) -> int:
             connection.commit()
         finally:
             connection.close()
-    except (config.ConfigurationError, MissingSchemaError) as error:
+    except (config.ConfigurationError, MissingSchemaError, integrity.IntegrityError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     print(f"load file: {output_path}")

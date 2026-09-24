@@ -162,3 +162,17 @@ def test_fails_clearly_when_the_dw_schema_does_not_exist(
     assert exit_code == 1
     assert "schema dw" in capsys.readouterr().err
     assert factory.keys == []
+
+
+def test_fails_clearly_when_the_integrity_fails(
+    environment, container_runner, monkeypatch, capsys
+):
+    monkeypatch.setattr(
+        "pipeline.integrity.violations", lambda cursor, tpu: ["judged theme without text"]
+    )
+
+    exit_code = main([], session_factory=SessionFactory(), runner=container_runner)
+
+    assert exit_code == 1
+    assert "judged theme without text" in capsys.readouterr().err
+    assert not environment.exists()

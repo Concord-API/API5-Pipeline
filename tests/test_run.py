@@ -1,9 +1,11 @@
 import json
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import psycopg2
+import pytest
 
+from pipeline import integrity
 from pipeline.raw_schema import ensure as ensure_raw
 from pipeline.run import run
 from pipeline.search_synonym import load as load_search_synonyms
@@ -31,7 +33,7 @@ def insert_raw_case(cursor):
     )
 
 
-def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_path):
+def run_once(postgres_container, dw_ready, tmp_path):
     tpu = load_tpu(FIXTURE_TPU)
     local_dsn = (
         f"postgresql://{postgres_container.username}:{postgres_container.password}"
@@ -64,7 +66,12 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
         run(cursor, local_dsn, tpu, groups=[], output_path=output_path, runner=container_runner)
         connection.commit()
 
-    content = output_path.read_text(encoding="utf-8")
+    return output_path.read_text(encoding="utf-8")
+
+
+def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_path):
+    content = run_once(postgres_container, dw_ready, tmp_path)
+
     assert content.startswith("BEGIN;")
     assert content.rstrip().endswith("COMMIT;")
     assert "COPY dw.dim_case" in content
@@ -73,6 +80,7 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
     assert "COPY dw.strength_config" in content
     assert "COPY dw.search_synonym" in content
     assert "COPY dw.theme_narrative" in content
+    assert "COPY dw.dim_date" in content
     assert "negativado\tinclusao indevida cadastro inadimplentes" in content
 
     with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
@@ -89,3 +97,28 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
         assert cursor.fetchall() == [("template", 3)]
         cursor.execute("SELECT count(*) FROM dw.search_synonym")
         assert cursor.fetchone() == (len(load_search_synonyms()),)
+
+
+def test_run_dates_every_fact_and_the_theme_period(postgres_container, dw_ready, tmp_path):
+    run_once(postgres_container, dw_ready, tmp_path)
+
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT count(*) FROM dw.fact_case_event WHERE date_sk IS NULL")
+        assert cursor.fetchone() == (0,)
+        cursor.execute("SELECT min(full_date), max(full_date) FROM dw.dim_date")
+        first, last = cursor.fetchone()
+        assert first == date(1940, 1, 1)
+        assert last == date(datetime.now(timezone.utc).year + 1, 12, 31)
+        cursor.execute("SELECT period_start_year, last_decision_date FROM dw.theme_summary")
+        assert cursor.fetchall() == [(2024, date(2024, 6, 1))]
+
+
+def test_run_does_not_write_the_load_file_when_the_integrity_fails(
+    postgres_container, dw_ready, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(integrity, "violations", lambda cursor, tpu: ["fact without date"])
+
+    with pytest.raises(integrity.IntegrityError, match="fact without date"):
+        run_once(postgres_container, dw_ready, tmp_path)
+
+    assert not (tmp_path / "load.sql").exists()

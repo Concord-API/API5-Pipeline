@@ -85,3 +85,13 @@ def test_new_session_sends_the_datajud_key():
 
     assert session.headers["Authorization"] == "APIKey public-key"
     assert session.headers["Content-Type"] == "application/json"
+
+
+def test_queries_only_cases_with_a_verified_decision_movement():
+    tpu = load(FIXTURE_TPU)
+    collect = FakeCollect()
+
+    harvest(None, FakeCursor(), tpu, tribunals=("tjsp",), area_quotas={"899": 700}, collect=collect)
+
+    query = collect.calls[0]["query"]["bool"]
+    assert {"terms": {"movimentos.codigo": [219, 220, 221, 237, 238, 239]}} in query["filter"]
