@@ -106,5 +106,10 @@ def test_map_court_level_known_values():
     assert map_court_level("GR") == "Second"
 
 
+def test_map_court_level_special_court_and_appeal_panel():
+    assert map_court_level("JE") == "SpecialCourt"
+    assert map_court_level("TR") == "AppealPanel"
+
+
 def test_map_court_level_unknown_value_is_kept():
     assert map_court_level("G3") == "G3"

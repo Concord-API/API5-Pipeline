@@ -3,6 +3,7 @@ import pytest
 
 from pipeline.dw_case import load
 from pipeline.dw_reference import load_case_classes, seed_courts
+from pipeline.transform import map_court_level
 
 
 @pytest.fixture
@@ -113,3 +114,12 @@ def test_a_second_load_updates_court_level_but_not_secrecy_level(cursor):
     court_level, secrecy_level, _, _ = fetch_case(cursor, "A")
     assert court_level == "Second"
     assert secrecy_level == 0
+
+
+@pytest.mark.parametrize("grau, level", [("JE", "SpecialCourt"), ("TR", "AppealPanel")])
+def test_a_special_court_or_appeal_panel_case_loads(cursor, grau, level):
+    insert_staging_row(cursor, case_number="A", court_level=map_court_level(grau))
+    load(cursor)
+
+    court_level, _, _, _ = fetch_case(cursor, "A")
+    assert court_level == level
