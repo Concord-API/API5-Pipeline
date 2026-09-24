@@ -13,6 +13,7 @@ from pipeline import (
     strength_config,
     theme_build,
     theme_load,
+    theme_narrative,
     theme_registry,
 )
 from pipeline.staging_schema import ensure as ensure_staging
@@ -70,7 +71,9 @@ def run(cursor, dsn, tpu, groups, output_path, runner=None):
     transform_all(cursor, tpu)
     load_dimensions(cursor, tpu)
     load_themes(cursor, groups)
-    strength_config.seed(cursor, datetime.now(timezone.utc).year)
+    today = datetime.now(timezone.utc).date()
+    strength_config.seed(cursor, today.year)
     search_synonym.seed(cursor, search_synonym.load())
+    theme_narrative.generate(cursor, today)
     cursor.connection.commit()
     return load_file.generate(cursor, dsn, output_path, runner=runner)
