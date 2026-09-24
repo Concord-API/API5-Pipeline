@@ -22,6 +22,10 @@ VERIFIED_MOVEMENTS = [
 ]
 
 
+def verified_movement_codes():
+    return [code for code, *_ in VERIFIED_MOVEMENTS]
+
+
 def seed_courts(cursor):
     for code, name, uf in COURTS:
         cursor.execute(

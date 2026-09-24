@@ -2,12 +2,14 @@ import psycopg2
 import pytest
 
 from pipeline.dw_reference import (
+    VERIFIED_MOVEMENTS,
     load_case_classes,
     load_judging_bodies,
     load_movements,
     seed_courts,
     seed_outcomes,
     seed_verified_movements,
+    verified_movement_codes,
 )
 
 
@@ -196,3 +198,8 @@ def test_a_code_outside_the_list_stays_neutral_and_unverified(cursor):
     load_movements(cursor)
 
     assert movement(cursor, 999) == ("Neutral", False, None)
+
+
+def test_the_harvest_codes_are_the_verified_movements():
+    assert verified_movement_codes() == [219, 220, 221, 237, 238, 239]
+    assert verified_movement_codes() == [code for code, *_ in VERIFIED_MOVEMENTS]
