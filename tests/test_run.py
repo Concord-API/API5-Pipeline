@@ -3,7 +3,9 @@ import os
 from datetime import date, datetime, timezone
 
 import psycopg2
+import pytest
 
+from pipeline import integrity
 from pipeline.raw_schema import ensure as ensure_raw
 from pipeline.run import run
 from pipeline.search_synonym import load as load_search_synonyms
@@ -109,3 +111,14 @@ def test_run_dates_every_fact_and_the_theme_period(postgres_container, dw_ready,
         assert last == date(datetime.now(timezone.utc).year + 1, 12, 31)
         cursor.execute("SELECT period_start_year, last_decision_date FROM dw.theme_summary")
         assert cursor.fetchall() == [(2024, date(2024, 6, 1))]
+
+
+def test_run_does_not_write_the_load_file_when_the_integrity_fails(
+    postgres_container, dw_ready, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(integrity, "violations", lambda cursor, tpu: ["fact without date"])
+
+    with pytest.raises(integrity.IntegrityError, match="fact without date"):
+        run_once(postgres_container, dw_ready, tmp_path)
+
+    assert not (tmp_path / "load.sql").exists()
