@@ -44,6 +44,28 @@ def _get_json(session, url, params, sleep):
     raise SciELOError(f"SciELO request failed: {url}")
 
 
+def _parse_identifier_page(data, issn, offset, total, seen):
+    page_total = data.get("meta", {}).get("total")
+    objects = data.get("objects")
+    if not isinstance(page_total, int) or page_total < 0 or not isinstance(objects, list):
+        raise SciELOError(f"invalid SciELO identifier page: {issn}, offset {offset}")
+    if total is not None and page_total != total:
+        raise SciELOError(f"SciELO identifier total changed: {issn}")
+    if not objects and offset < page_total:
+        raise SciELOError(f"incomplete SciELO identifiers: {issn}, {offset}/{page_total}")
+    if offset + len(objects) > page_total:
+        raise SciELOError(f"inconsistent SciELO identifiers: {issn}")
+
+    codes = []
+    for item in objects:
+        code = item.get("code") if isinstance(item, dict) else None
+        if not code or code in seen:
+            raise SciELOError(f"invalid or duplicate SciELO code: {issn}")
+        seen.add(code)
+        codes.append(code)
+    return page_total, codes
+
+
 def _article_codes(session, issn, sleep):
     codes = []
     seen = set()
@@ -53,25 +75,9 @@ def _article_codes(session, issn, sleep):
         data = _get_json(session, IDENTIFIERS_URL, {
             "collection": "scl", "issn": issn, "offset": offset, "limit": PAGE_SIZE,
         }, sleep)
-        page_total = data.get("meta", {}).get("total")
-        objects = data.get("objects")
-        if not isinstance(page_total, int) or page_total < 0 or not isinstance(objects, list):
-            raise SciELOError(f"invalid SciELO identifier page: {issn}, offset {offset}")
-        if total is None:
-            total = page_total
-        elif page_total != total:
-            raise SciELOError(f"SciELO identifier total changed: {issn}")
-        if not objects and offset < total:
-            raise SciELOError(f"incomplete SciELO identifiers: {issn}, {offset}/{total}")
-        if offset + len(objects) > total:
-            raise SciELOError(f"inconsistent SciELO identifiers: {issn}")
-        for item in objects:
-            code = item.get("code") if isinstance(item, dict) else None
-            if not code or code in seen:
-                raise SciELOError(f"invalid or duplicate SciELO code: {issn}")
-            seen.add(code)
-            codes.append(code)
-        offset += len(objects)
+        total, page_codes = _parse_identifier_page(data, issn, offset, total, seen)
+        codes.extend(page_codes)
+        offset += len(page_codes)
     return codes
 
 
