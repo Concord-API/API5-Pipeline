@@ -77,6 +77,20 @@ def test_collects_full_payload_and_deduplicates_overlapping_terms(cursor):
     assert collect(session, cursor, terms=("direito",), years=(2024,)) == 0
 
 
+def test_updates_metadata_without_creating_a_second_article(cursor):
+    record = article("abc")
+    session = FakeSession([record])
+    assert collect(session, cursor, terms=("direito",), years=(2024,)) == 1
+
+    record["bibjson"]["title"] = "Updated title"
+    changed = collect(session, cursor, terms=("direito",), years=(2024,))
+
+    assert changed == 1
+    cursor.execute("SELECT count(*), max(payload->'bibjson'->>'title') FROM raw.doctrine_article")
+    assert cursor.fetchone() == (1, "Updated title")
+    assert collect(session, cursor, terms=("direito",), years=(2024,)) == 0
+
+
 def test_splits_above_the_api_limit_and_collects_every_record(cursor):
     records = [article(i) for i in range(500)]
     records += [article(i, "2024-09-01T00:00:00Z") for i in range(500, 1001)]
