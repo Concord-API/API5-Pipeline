@@ -2,6 +2,7 @@ import hashlib
 import json
 import time
 from pathlib import Path
+from urllib.parse import quote, urlencode
 from xml.etree import ElementTree as ET
 
 import requests
@@ -106,13 +107,26 @@ def _parse_page(content, url, token):
     return records, token.strip() if token and token.strip() else None
 
 
+def _source_url(source, record):
+    identifiers = record["identifiers"]
+    article_url = next(
+        (value for value in identifiers if value.startswith(("http://", "https://"))), None,
+    )
+    if article_url:
+        return article_url
+    doi = next((value[4:].strip() for value in identifiers
+                if value.lower().startswith("doi:")), None)
+    if doi:
+        return f"https://doi.org/{quote(doi, safe='/')}"
+    query = urlencode({
+        "verb": "GetRecord", "metadataPrefix": "oai_dc", "identifier": record["oai_id"],
+    })
+    return f"{source['oai_url']}?{query}"
+
+
 def _insert(cursor, source, record):
     payload = json.dumps(record, ensure_ascii=False, sort_keys=True)
-    identifiers = record["identifiers"]
-    source_url = next(
-        (value for value in identifiers if value.startswith(("http://", "https://"))),
-        source["journal_url"],
-    )
+    source_url = _source_url(source, record)
     identity = f"{source['oai_url']}\0{record['oai_id']}"
     cursor.execute(
         """
