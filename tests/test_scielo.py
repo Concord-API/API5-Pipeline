@@ -67,9 +67,13 @@ def test_collects_all_identifier_pages_and_preserves_full_response(cursor, monke
 
     assert collect(session, cursor, issns=("1806-6445",), sleep=lambda _: None) == 3
 
-    offsets = [params["offset"] for url, params in session.requests if url.endswith("/identifiers/")]
+    offsets = [
+        params["offset"] for url, params in session.requests if url.endswith("/identifiers/")
+    ]
     assert offsets == [0, 2]
-    cursor.execute("SELECT source, source_url, payload FROM raw.doctrine_article ORDER BY payload->>'code'")
+    cursor.execute(
+        "SELECT source, source_url, payload FROM raw.doctrine_article ORDER BY payload->>'code'"
+    )
     rows = cursor.fetchall()
     assert len(rows) == 3
     assert rows[0][0] == "scielo"
@@ -86,7 +90,10 @@ def test_updates_an_article_without_duplicating_its_code(cursor):
     record["article"]["v12"][0]["_"] = "Updated title"
     assert collect(session, cursor, issns=("1806-6445",), sleep=lambda _: None) == 1
 
-    cursor.execute("SELECT count(*), max(payload->'article'->'v12'->0->>'_') FROM raw.doctrine_article")
+    cursor.execute(
+        "SELECT count(*), max(payload->'article'->'v12'->0->>'_') "
+        "FROM raw.doctrine_article"
+    )
     assert cursor.fetchone() == (1, "Updated title")
 
 
