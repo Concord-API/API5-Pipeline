@@ -94,7 +94,7 @@ def test_harvests_all_pages_and_preserves_metadata(cursor, source):
     assert rows[0][1] == "https://example.org/article/1"
     assert rows[0][2]["creators"] == ["Ana", "Bruno"]
     assert rows[0][2]["metadata"]["subject"] == ["Direito civil"]
-    assert rows[1][1] == "https://example.org"
+    assert rows[1][1] == "https://doi.org/10.1/second"
 
 
 def test_rerun_updates_metadata_without_duplicating(cursor, source):
@@ -219,3 +219,15 @@ def test_ignores_empty_and_non_dublin_core_fields(cursor, source):
     assert collect(session, cursor, sources=[source], sleep=lambda _: None) == 1
     cursor.execute("SELECT payload->'metadata' FROM raw.doctrine_article")
     assert "subject" not in cursor.fetchone()[0]
+
+
+def test_uses_record_specific_oai_url_when_article_has_no_link(cursor, source):
+    xml = SECOND_PAGE.replace(b"<dc:identifier>doi:10.1/second</dc:identifier>", b"")
+    session = FakeSession([FakeResponse(xml)])
+
+    assert collect(session, cursor, sources=[source], sleep=lambda _: None) == 1
+    cursor.execute("SELECT source_url FROM raw.doctrine_article")
+    assert cursor.fetchone()[0] == (
+        "https://example.org/oai?verb=GetRecord&metadataPrefix=oai_dc&"
+        "identifier=oai%3Aexample%3Aarticle%2F2"
+    )
