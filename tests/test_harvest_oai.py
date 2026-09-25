@@ -66,3 +66,14 @@ def test_module_entrypoint_reports_configuration_error(monkeypatch, capsys):
 
     assert error.value.code == 1
     assert "DATABASE_URL" in capsys.readouterr().err
+
+
+def test_reports_a_disabled_repository(postgres_url, monkeypatch, capsys):
+    monkeypatch.setenv("DATABASE_URL", postgres_url)
+
+    def collect(session_arg, cursor, repositories, on_repository):
+        on_repository("revistaFADI", 0, 0, "OAI endpoint requires access")
+        return 0
+
+    assert main([], session_factory=FakeSession, collect_fn=collect) == 0
+    assert "revistaFADI: skipped (OAI endpoint requires access)" in capsys.readouterr().out

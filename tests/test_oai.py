@@ -163,6 +163,7 @@ def test_loads_curated_repositories():
     sources = load_sources()
     assert len(sources) == 48
     assert {source["name"] for source in sources} >= {"emerj", "ejef", "direitocivil"}
+    assert next(source for source in sources if source["name"] == "revistaFADI")["enabled"] is False
 
 
 @pytest.mark.parametrize("failure", [requests.ConnectionError("reset"), FakeResponse(b"", 503)])
@@ -231,3 +232,15 @@ def test_uses_record_specific_oai_url_when_article_has_no_link(cursor, source):
         "https://example.org/oai?verb=GetRecord&metadataPrefix=oai_dc&"
         "identifier=oai%3Aexample%3Aarticle%2F2"
     )
+
+
+def test_reports_explicitly_disabled_repository_without_requesting_it(cursor, source):
+    source.update({"name": "revistaFADI", "enabled": False,
+                   "disabled_reason": "OAI endpoint requires access"})
+    session = FakeSession([])
+    progress = []
+
+    assert collect(session, cursor, sources=[source], sleep=lambda _: None,
+                   on_repository=lambda *values: progress.append(values)) == 0
+    assert session.requests == []
+    assert progress == [("revistaFADI", 0, 0, "OAI endpoint requires access")]
