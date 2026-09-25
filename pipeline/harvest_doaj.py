@@ -33,7 +33,15 @@ def main(argv=None, session_factory=requests.Session, collect_fn=doaj.collect):
             session = session_factory()
             session.headers.update({"User-Agent": "Ratio-DW/1.0 (FATEC API-5)"})
             try:
-                inserted = collect_fn(session, cursor, terms=args.term, years=args.year)
+                inserted = collect_fn(
+                    session,
+                    cursor,
+                    terms=args.term,
+                    years=args.year,
+                    on_bucket=lambda term, year, changed: print(
+                        f"{term} / {year}: {changed} new or updated articles", flush=True
+                    ),
+                )
                 connection.commit()
             finally:
                 session.close()
@@ -45,7 +53,7 @@ def main(argv=None, session_factory=requests.Session, collect_fn=doaj.collect):
     finally:
         if connection is not None:
             connection.close()
-    print(f"DOAJ harvest: {inserted} new articles")
+    print(f"DOAJ harvest: {inserted} new or updated articles")
     return 0
 
 

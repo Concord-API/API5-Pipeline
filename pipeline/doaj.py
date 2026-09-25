@@ -10,6 +10,7 @@ import requests
 API_URL = "https://doaj.org/api/search/articles"
 PAGE_SIZE = 100
 RESULT_LIMIT = 1000
+REQUEST_INTERVAL = 0.15
 MIN_CREATED = datetime(1900, 1, 1, tzinfo=timezone.utc)
 MAX_CREATED = datetime(2100, 1, 1, tzinfo=timezone.utc)
 TERMS_FILE = Path(__file__).parent / "data" / "doaj_terms.json"
@@ -30,6 +31,7 @@ def _timestamp(value):
 def _search_page(session, query, page, sleep):
     url = f"{API_URL}/{quote(query, safe='')}"
     for attempt in range(4):
+        sleep(REQUEST_INTERVAL)
         try:
             response = session.get(
                 url, params={"page": page, "pageSize": PAGE_SIZE}, timeout=30
@@ -65,11 +67,15 @@ def _insert(cursor, record):
         """
         INSERT INTO raw.doctrine_article (source, source_url, payload_hash, payload)
         VALUES ('doaj', %s, %s, %s)
-        ON CONFLICT (source, payload_hash) DO NOTHING
+        ON CONFLICT (source, payload_hash) DO UPDATE SET
+            source_url = EXCLUDED.source_url,
+            collected_at = now(),
+            payload = EXCLUDED.payload
+        WHERE raw.doctrine_article.payload IS DISTINCT FROM EXCLUDED.payload
         """,
         (
             f"https://doaj.org/article/{article_id}",
-            hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+            hashlib.sha256(str(article_id).encode("utf-8")).hexdigest(),
             payload,
         ),
     )
@@ -129,12 +135,15 @@ def _collect_query(session, cursor, query, sleep):
     return _collect_window(session, cursor, query, MIN_CREATED, MAX_CREATED, window, sleep)
 
 
-def collect(session, cursor, terms=None, years=None, sleep=time.sleep):
+def collect(session, cursor, terms=None, years=None, sleep=time.sleep, on_bucket=None):
     terms = load_terms() if terms is None else terms
     years = range(1997, datetime.now(timezone.utc).year + 1) if years is None else years
     inserted = 0
     for term in terms:
         for year in years:
-            inserted += _collect_query(session, cursor, f"{term} AND bibjson.year:{year}", sleep)
+            changed = _collect_query(session, cursor, f"{term} AND bibjson.year:{year}", sleep)
+            inserted += changed
             cursor.connection.commit()
+            if on_bucket is not None:
+                on_bucket(term, year, changed)
     return inserted
