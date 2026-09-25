@@ -91,6 +91,21 @@ def test_updates_metadata_without_creating_a_second_article(cursor):
     assert collect(session, cursor, terms=("direito",), years=(2024,)) == 0
 
 
+def test_reports_each_completed_search_bucket(cursor):
+    session = FakeSession([article("abc")])
+    completed = []
+
+    collect(
+        session,
+        cursor,
+        terms=("direito", "jurisprudência"),
+        years=(2024,),
+        on_bucket=lambda term, year, changed: completed.append((term, year, changed)),
+    )
+
+    assert completed == [("direito", 2024, 1), ("jurisprudência", 2024, 0)]
+
+
 def test_splits_above_the_api_limit_and_collects_every_record(cursor):
     records = [article(i) for i in range(500)]
     records += [article(i, "2024-09-01T00:00:00Z") for i in range(500, 1001)]

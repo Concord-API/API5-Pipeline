@@ -20,8 +20,9 @@ def test_runs_manual_harvest_with_selected_terms_and_years(postgres_url, monkeyp
     session = FakeSession()
     received = []
 
-    def collect(session_arg, cursor, terms, years):
+    def collect(session_arg, cursor, terms, years, on_bucket):
         received.append((session_arg, terms, years))
+        on_bucket("direito civil", 2024, 1)
         cursor.execute("TRUNCATE raw.doctrine_article")
         cursor.execute(
             """
@@ -40,7 +41,9 @@ def test_runs_manual_harvest_with_selected_terms_and_years(postgres_url, monkeyp
     assert exit_code == 0
     assert received == [(session, ["direito civil"], [2024])]
     assert session.closed
-    assert "1 new articles" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "direito civil / 2024: 1 new or updated articles" in output
+    assert "1 new or updated articles" in output
     with psycopg2.connect(postgres_url) as connection, connection.cursor() as cursor:
         cursor.execute("SELECT count(*) FROM raw.doctrine_article")
         assert cursor.fetchone()[0] == 1
@@ -69,7 +72,7 @@ def test_rolls_back_a_failed_harvest(postgres_url, monkeypatch, capsys):
         ensure(cursor)
         cursor.execute("TRUNCATE raw.doctrine_article")
 
-    def collect(session_arg, cursor, terms, years):
+    def collect(session_arg, cursor, terms, years, on_bucket):
         cursor.execute("TRUNCATE raw.doctrine_article")
         cursor.execute(
             """
