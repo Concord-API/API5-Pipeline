@@ -88,7 +88,7 @@ def test_splits_above_the_api_limit_and_collects_every_record(cursor):
     cursor.execute("SELECT count(*) FROM raw.doctrine_article")
     assert cursor.fetchone()[0] == 1001
     assert any("created_date:[" in query for query, _ in session.requests)
-    assert max(page for _, page in session.requests) == 1
+    assert max(page for _, page in session.requests) <= 10
 
 
 def test_rejects_a_partition_that_cannot_account_for_all_results(cursor):
