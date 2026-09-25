@@ -1,5 +1,11 @@
-import psycopg2
+import runpy
+import sys
+from pathlib import Path
 
+import psycopg2
+import pytest
+
+from pipeline import harvest_oai
 from pipeline.harvest_oai import main
 from pipeline.oai import OAIError
 from pipeline.raw_schema import ensure
@@ -49,3 +55,14 @@ def test_rolls_back_failed_repository(postgres_url, monkeypatch, capsys):
     with psycopg2.connect(postgres_url) as connection, connection.cursor() as cursor:
         cursor.execute("SELECT count(*) FROM raw.doctrine_article")
         assert cursor.fetchone()[0] == 0
+
+
+def test_module_entrypoint_reports_configuration_error(monkeypatch, capsys):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr(sys, "argv", ["python -m pipeline.harvest_oai"])
+
+    with pytest.raises(SystemExit) as error:
+        runpy.run_path(str(Path(harvest_oai.__file__)), run_name="__main__")
+
+    assert error.value.code == 1
+    assert "DATABASE_URL" in capsys.readouterr().err

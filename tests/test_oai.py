@@ -77,8 +77,10 @@ def test_harvests_all_pages_and_preserves_metadata(cursor, source):
     session = FakeSession([FakeResponse(FIRST_PAGE), FakeResponse(SECOND_PAGE)])
     progress = []
 
-    assert collect(session, cursor, sources=[source], sleep=lambda _: None,
-                   on_repository=lambda *values: progress.append(values)) == 2
+    assert collect(
+        session, cursor, sources=[source], repositories=["example"], sleep=lambda _: None,
+        on_repository=lambda *values: progress.append(values),
+    ) == 2
     assert session.requests[0][1] == {"verb": "ListRecords", "metadataPrefix": "oai_dc"}
     assert session.requests[1][1] == {"verb": "ListRecords", "resumptionToken": "next-page"}
     assert progress == [("example", 2, 2)]
@@ -132,7 +134,9 @@ def test_rejects_invalid_or_error_responses(cursor, source, response):
 
 
 def test_rejects_a_repeated_resumption_token(cursor, source):
-    session = FakeSession([FakeResponse(FIRST_PAGE), FakeResponse(FIRST_PAGE)])
+    repeated = SECOND_PAGE.replace(b"<resumptionToken></resumptionToken>",
+                                   b"<resumptionToken>next-page</resumptionToken>")
+    session = FakeSession([FakeResponse(FIRST_PAGE), FakeResponse(repeated)])
 
     with pytest.raises(OAIError, match="token"):
         collect(session, cursor, sources=[source], sleep=lambda _: None)
@@ -159,3 +163,59 @@ def test_loads_curated_repositories():
     sources = load_sources()
     assert len(sources) == 48
     assert {source["name"] for source in sources} >= {"emerj", "ejef", "direitocivil"}
+
+
+@pytest.mark.parametrize("failure", [requests.ConnectionError("reset"), FakeResponse(b"", 503)])
+def test_reports_persistent_repository_unavailability(cursor, source, failure):
+    session = FakeSession([failure] * 4)
+
+    with pytest.raises(OAIError, match="request failed|unavailable"):
+        collect(session, cursor, sources=[source], sleep=lambda _: None)
+    assert len(session.requests) == 4
+
+
+@pytest.mark.parametrize("xml", [
+    b"<response/>",
+    b'<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/"/>',
+    b'<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">'
+    b'<ListRecords><record/></ListRecords></OAI-PMH>',
+    b'<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">'
+    b'<ListRecords><record><header/></record></ListRecords></OAI-PMH>',
+    b'<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">'
+    b'<ListRecords><record><header><identifier>oai:example:article/3</identifier>'
+    b'</header></record></ListRecords></OAI-PMH>',
+])
+def test_rejects_malformed_protocol_records(cursor, source, xml):
+    session = FakeSession([FakeResponse(xml)])
+
+    with pytest.raises(OAIError):
+        collect(session, cursor, sources=[source], sleep=lambda _: None)
+
+
+def test_rejects_duplicate_identifiers_across_pages(cursor, source):
+    duplicate = SECOND_PAGE.replace(b"article/2", b"article/1")
+    session = FakeSession([FakeResponse(FIRST_PAGE), FakeResponse(duplicate)])
+
+    with pytest.raises(OAIError, match="duplicate"):
+        collect(session, cursor, sources=[source], sleep=lambda _: None)
+
+
+def test_rejects_no_records_match_after_a_resumption_token(cursor, source):
+    empty = (b'<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">'
+             b'<error code="noRecordsMatch"/></OAI-PMH>')
+    session = FakeSession([FakeResponse(FIRST_PAGE), FakeResponse(empty)])
+
+    with pytest.raises(OAIError, match="noRecordsMatch"):
+        collect(session, cursor, sources=[source], sleep=lambda _: None)
+
+
+def test_ignores_empty_and_non_dublin_core_fields(cursor, source):
+    xml = FIRST_PAGE.replace(
+        b"<dc:subject>Direito civil</dc:subject>",
+        b'<dc:subject>   </dc:subject><x:note xmlns:x="urn:other">ignored</x:note>',
+    ).replace(b'<resumptionToken cursor="0">next-page</resumptionToken>', b'')
+    session = FakeSession([FakeResponse(xml)])
+
+    assert collect(session, cursor, sources=[source], sleep=lambda _: None) == 1
+    cursor.execute("SELECT payload->'metadata' FROM raw.doctrine_article")
+    assert "subject" not in cursor.fetchone()[0]
