@@ -22,7 +22,8 @@ def load_issns(path=ISSNS_FILE):
 
 
 def _get_json(session, url, params, sleep):
-    for attempt in range(4):
+    attempt = 0
+    while True:
         sleep(REQUEST_INTERVAL)
         try:
             response = session.get(url, params=params, timeout=30)
@@ -30,18 +31,19 @@ def _get_json(session, url, params, sleep):
             if attempt == 3:
                 raise SciELOError(f"SciELO request failed: {url}") from error
             sleep(2 * (attempt + 1))
+            attempt += 1
             continue
         if response.status_code == 429 or response.status_code >= 500:
             if attempt == 3:
                 raise SciELOError(f"SciELO unavailable: {url}")
             sleep(2 * (attempt + 1))
+            attempt += 1
             continue
         response.raise_for_status()
         data = response.json()
         if not isinstance(data, dict):
             raise SciELOError(f"invalid SciELO response: {url}")
         return data
-    raise SciELOError(f"SciELO request failed: {url}")
 
 
 def _parse_identifier_page(data, issn, offset, total, seen):

@@ -15,9 +15,13 @@ def run(collect, error_type, source, session_factory=requests.Session):
         print(f"error: {error}", file=sys.stderr)
         return 1
 
-    connection = None
     try:
         connection = psycopg2.connect(dsn)
+    except psycopg2.Error as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+
+    try:
         with connection.cursor() as cursor:
             ensure(cursor)
             connection.commit()
@@ -29,12 +33,10 @@ def run(collect, error_type, source, session_factory=requests.Session):
             finally:
                 session.close()
     except (error_type, requests.RequestException, psycopg2.Error) as error:
-        if connection is not None:
-            connection.rollback()
+        connection.rollback()
         print(f"error: {error}", file=sys.stderr)
         return 1
     finally:
-        if connection is not None:
-            connection.close()
+        connection.close()
     print(f"{source} harvest: {changed} new or updated articles")
     return 0

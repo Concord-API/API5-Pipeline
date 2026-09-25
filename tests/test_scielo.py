@@ -3,13 +3,13 @@ import pytest
 import requests
 
 from pipeline.raw_schema import ensure
-from pipeline.scielo import SciELOError, collect
+from pipeline.scielo import SciELOError, collect, load_issns
 
 
 class FakeResponse:
     def __init__(self, status_code, body=None):
         self.status_code = status_code
-        self.body = body or {}
+        self.body = {} if body is None else body
 
     def raise_for_status(self):
         if self.status_code >= 400:
@@ -122,3 +122,72 @@ def test_rejects_an_article_with_the_wrong_code(cursor):
 
     with pytest.raises(SciELOError, match="code"):
         collect(session, cursor, issns=("1806-6445",), sleep=lambda _: None)
+
+
+def test_loads_the_curated_law_journals():
+    assert len(load_issns()) == 6
+    assert "2317-7721" in load_issns()
+
+
+@pytest.mark.parametrize("failure", [requests.ConnectionError("reset"), FakeResponse(503)])
+def test_reports_persistent_scielo_unavailability(cursor, failure):
+    session = FakeSession({})
+    session.responses = [failure] * 4
+
+    with pytest.raises(SciELOError, match="request failed|unavailable"):
+        collect(session, cursor, issns=("1806-6445",), sleep=lambda _: None)
+    assert len(session.requests) == 4
+
+
+def test_rejects_a_non_object_scielo_response(cursor):
+    session = FakeSession({})
+    session.responses = [FakeResponse(200, ["unexpected"])]
+
+    with pytest.raises(SciELOError, match="invalid SciELO response"):
+        collect(session, cursor, issns=("1806-6445",), sleep=lambda _: None)
+
+
+@pytest.mark.parametrize("page", [
+    {"meta": {"total": -1}, "objects": []},
+    {"meta": {"total": 1}, "objects": [{"code": "a"}, {"code": "b"}]},
+    {"meta": {"total": 1}, "objects": [{"code": None}]},
+])
+def test_rejects_invalid_identifier_pages(cursor, page):
+    session = FakeSession({})
+    session.responses = [FakeResponse(200, page)]
+
+    with pytest.raises(SciELOError):
+        collect(session, cursor, issns=("1806-6445",), sleep=lambda _: None)
+
+
+def test_rejects_duplicate_codes_across_pages(cursor, monkeypatch):
+    monkeypatch.setattr("pipeline.scielo.PAGE_SIZE", 1)
+    session = FakeSession({})
+    session.responses = [
+        FakeResponse(200, {"meta": {"total": 2}, "objects": [{"code": "a"}]}),
+        FakeResponse(200, {"meta": {"total": 2}, "objects": [{"code": "a"}]}),
+    ]
+
+    with pytest.raises(SciELOError, match="duplicate"):
+        collect(session, cursor, issns=("1806-6445",), sleep=lambda _: None)
+
+
+def test_rejects_identifier_total_change(cursor, monkeypatch):
+    monkeypatch.setattr("pipeline.scielo.PAGE_SIZE", 1)
+    session = FakeSession({})
+    session.responses = [
+        FakeResponse(200, {"meta": {"total": 2}, "objects": [{"code": "a"}]}),
+        FakeResponse(200, {"meta": {"total": 3}, "objects": [{"code": "b"}]}),
+    ]
+
+    with pytest.raises(SciELOError, match="total changed"):
+        collect(session, cursor, issns=("1806-6445",), sleep=lambda _: None)
+
+
+def test_reports_completed_journal(cursor):
+    session = FakeSession({"abc": article("abc")})
+    progress = []
+
+    assert collect(session, cursor, issns=("1806-6445",), sleep=lambda _: None,
+                   on_journal=lambda *values: progress.append(values)) == 1
+    assert progress == [("1806-6445", 1, 1)]
