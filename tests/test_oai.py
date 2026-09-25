@@ -244,3 +244,4 @@ def test_reports_explicitly_disabled_repository_without_requesting_it(cursor, so
                    on_repository=lambda *values: progress.append(values)) == 0
     assert session.requests == []
     assert progress == [("revistaFADI", 0, 0, "OAI endpoint requires access")]
+    assert collect(session, cursor, sources=[source], sleep=lambda _: None) == 0

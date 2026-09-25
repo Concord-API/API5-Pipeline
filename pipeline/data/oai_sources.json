@@ -123,7 +123,9 @@
     "name": "revistaFADI",
     "source": "oai_indexlaw",
     "oai_url": "https://www.indexlaw.org/index.php/revistaFADI/oai",
-    "journal_url": "https://www.indexlaw.org/index.php/revistaFADI"
+    "journal_url": "https://www.indexlaw.org/index.php/revistaFADI",
+    "enabled": false,
+    "disabled_reason": "OAI endpoint requires access"
   },
   {
     "name": "revistacpc",

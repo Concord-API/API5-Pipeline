@@ -184,6 +184,10 @@ def collect(session, cursor, sources=None, repositories=None, sleep=time.sleep,
 
     changed = 0
     for source in sources:
+        if not source.get("enabled", True):
+            if on_repository is not None:
+                on_repository(source["name"], 0, 0, source["disabled_reason"])
+            continue
         found, repository_changed = _harvest_repository(session, cursor, source, sleep)
         cursor.connection.commit()
         changed += repository_changed
