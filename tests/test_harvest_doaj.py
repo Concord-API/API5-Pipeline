@@ -53,6 +53,15 @@ def test_fails_without_database_url(monkeypatch, capsys):
     assert "DATABASE_URL" in capsys.readouterr().err
 
 
+def test_fails_clearly_when_database_cannot_be_reached(monkeypatch, capsys):
+    monkeypatch.setenv(
+        "DATABASE_URL", "postgresql://test:test@127.0.0.1:1/test?connect_timeout=1"
+    )
+
+    assert main([], session_factory=FakeSession) == 1
+    assert "error:" in capsys.readouterr().err
+
+
 def test_rolls_back_a_failed_harvest(postgres_url, monkeypatch, capsys):
     monkeypatch.setenv("DATABASE_URL", postgres_url)
     session = FakeSession()
