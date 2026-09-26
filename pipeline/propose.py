@@ -5,15 +5,9 @@ import psycopg2
 from sklearn.cluster import AgglomerativeClustering
 
 from pipeline import config, theme_build
+from pipeline.embedding import local_encoder
 
-MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 THRESHOLD = 0.20
-
-
-def local_encoder(names):
-    from sentence_transformers import SentenceTransformer
-
-    return SentenceTransformer(MODEL, device="cpu").encode(list(names), normalize_embeddings=True)
 
 
 def clusters(names, vectors, threshold):
