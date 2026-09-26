@@ -10,6 +10,37 @@ STAGE = """
 """
 
 
+ATTACH_DOI = """
+    UPDATE dw.dim_doctrine d
+    SET doi = s.doi
+    FROM staging.doctrine_article s
+    WHERE d.doi IS NULL
+      AND s.doi IS NOT NULL
+      AND d.source = s.source
+      AND d.article_url = s.article_url
+      AND NOT EXISTS (SELECT 1 FROM dw.dim_doctrine other WHERE other.doi = s.doi)
+"""
+
+UPSERT = """
+    INSERT INTO dw.dim_doctrine
+        (title, authors, journal_name, publication_year, doi, article_url, subject_area,
+         source, extracted_at)
+    SELECT title, authors, journal_name, publication_year, doi, article_url, subject_area,
+           source, extracted_at
+    FROM staging.doctrine_article
+    WHERE doi IS {doi}
+    ON CONFLICT {key} DO UPDATE SET
+        title = EXCLUDED.title,
+        authors = EXCLUDED.authors,
+        journal_name = EXCLUDED.journal_name,
+        publication_year = EXCLUDED.publication_year,
+        article_url = EXCLUDED.article_url,
+        subject_area = EXCLUDED.subject_area,
+        source = EXCLUDED.source,
+        extracted_at = EXCLUDED.extracted_at
+"""
+
+
 def read_raw(cursor):
     cursor.execute(
         "SELECT id, source, source_url, collected_at, payload FROM raw.doctrine_article "
@@ -46,3 +77,9 @@ def transform(cursor):
     if rows:
         psycopg2.extras.execute_values(cursor, STAGE, rows)
     return len(rows)
+
+
+def load(cursor):
+    cursor.execute(ATTACH_DOI)
+    cursor.execute(UPSERT.format(doi="NOT NULL", key="(doi)"))
+    cursor.execute(UPSERT.format(doi="NULL", key="(source, article_url)"))
