@@ -20,6 +20,18 @@ CREATE TABLE IF NOT EXISTS staging.case_event (
     source_url TEXT NOT NULL,
     extracted_at TIMESTAMPTZ NOT NULL
 );
+CREATE TABLE IF NOT EXISTS staging.doctrine_article (
+    raw_id BIGINT NOT NULL,
+    title TEXT NOT NULL,
+    authors TEXT,
+    journal_name TEXT,
+    publication_year SMALLINT,
+    doi TEXT,
+    article_url TEXT NOT NULL,
+    subject_area TEXT,
+    source TEXT NOT NULL,
+    extracted_at TIMESTAMPTZ NOT NULL
+);
 """
 
 
