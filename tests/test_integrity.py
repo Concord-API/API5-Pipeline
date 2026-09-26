@@ -4,6 +4,8 @@ import psycopg2
 import pytest
 
 from pipeline import integrity
+from pipeline.doctrine_link import METHOD
+from pipeline.embedding import MODEL
 from pipeline.raw_schema import ensure as ensure_raw
 from pipeline.run import run
 from pipeline.theme_registry import ensure as ensure_theme_registry
@@ -135,6 +137,42 @@ def test_a_judged_theme_without_text(cursor, tpu):
     cursor.execute("DELETE FROM dw.theme_narrative")
 
     assert integrity.violations(cursor, tpu) == ["judged theme without text"]
+
+
+def link_doctrine(cursor, **overrides):
+    link = {"link_method": METHOD, "similarity": 0.8, "embedding_model": MODEL}
+    link.update(overrides)
+    cursor.execute(
+        "INSERT INTO dw.dim_doctrine (title, article_url, source, extracted_at) "
+        "VALUES ('Contratos em espécie', 'https://doutrina/1', 'doaj', now()) "
+        "RETURNING doctrine_sk"
+    )
+    doctrine_sk = cursor.fetchone()[0]
+    cursor.execute(
+        "INSERT INTO dw.bridge_subject_doctrine "
+        "(subject_sk, doctrine_sk, link_method, similarity, embedding_model) "
+        "SELECT subject_sk, %s, %s, %s, %s FROM dw.dim_subject LIMIT 1",
+        (doctrine_sk, link["link_method"], link["similarity"], link["embedding_model"]),
+    )
+    cursor.execute("REFRESH MATERIALIZED VIEW dw.data_provenance")
+
+
+def test_a_complete_doctrine_link_is_clean(cursor, tpu):
+    link_doctrine(cursor)
+
+    assert integrity.violations(cursor, tpu) == []
+
+
+@pytest.mark.parametrize("overrides", [
+    {"similarity": None},
+    {"similarity": 0.54},
+    {"link_method": ""},
+    {"embedding_model": None},
+])
+def test_a_doctrine_link_without_score_or_method(cursor, tpu, overrides):
+    link_doctrine(cursor, **overrides)
+
+    assert integrity.violations(cursor, tpu) == ["doctrine link without score or method"]
 
 
 def test_assert_clean_names_every_failed_check(cursor, tpu):
