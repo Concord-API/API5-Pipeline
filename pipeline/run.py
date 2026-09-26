@@ -4,6 +4,7 @@ from pipeline import (
     dw_case,
     dw_case_links,
     dw_date,
+    dw_doctrine,
     dw_fact,
     dw_movement_polarity,
     dw_reference,
@@ -55,6 +56,8 @@ def load_dimensions(cursor, tpu, calendar_until):
     dw_movement_polarity.set_polarity(cursor)
     dw_case_links.format_case_numbers(cursor)
     dw_case_links.set_source_links(cursor)
+    dw_doctrine.transform(cursor)
+    dw_doctrine.load(cursor)
 
 
 def subject_pairs(cursor):
