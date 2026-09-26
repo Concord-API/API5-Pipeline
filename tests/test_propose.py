@@ -1,7 +1,8 @@
 import psycopg2
 import pytest
 
-from pipeline.propose import MODEL, THRESHOLD, clusters, main, proposals
+from pipeline.embedding import MODEL
+from pipeline.propose import THRESHOLD, clusters, main, proposals
 
 VECTORS = {
     "Indenização por Dano Moral": [1.0, 0.0, 0.0],

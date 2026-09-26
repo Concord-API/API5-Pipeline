@@ -1,3 +1,4 @@
+from pipeline import doctrine_link
 from pipeline.tpu import penal_subject_codes
 
 
@@ -73,6 +74,13 @@ def checks(tpu):
             "SELECT s.theme_sk FROM dw.theme_summary s WHERE s.judged_case_count > 0 "
             "AND NOT EXISTS (SELECT 1 FROM dw.theme_narrative n WHERE n.theme_sk = s.theme_sk)",
             (),
+        ),
+        (
+            "doctrine link without score or method",
+            "SELECT subject_sk FROM dw.bridge_subject_doctrine "
+            "WHERE similarity IS NULL OR similarity < %s "
+            "OR link_method IS DISTINCT FROM %s OR embedding_model IS NULL",
+            (doctrine_link.THRESHOLD, doctrine_link.METHOD),
         ),
     ]
 
