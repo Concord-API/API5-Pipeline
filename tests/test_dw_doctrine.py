@@ -3,7 +3,7 @@ import json
 import psycopg2
 import pytest
 
-from pipeline.dw_doctrine import transform
+from pipeline.dw_doctrine import load, transform
 from pipeline.raw_schema import ensure as ensure_raw
 
 
@@ -94,3 +94,78 @@ def test_restages_from_scratch_on_every_run(cursor):
 
     assert transform(cursor) == 1
     assert len(staged(cursor)) == 1
+
+
+def dimension(cursor):
+    cursor.execute(
+        "SELECT doctrine_sk, source, title, doi, article_url, publication_year "
+        "FROM dw.dim_doctrine ORDER BY doctrine_sk"
+    )
+    return cursor.fetchall()
+
+
+def transform_and_load(cursor):
+    transform(cursor)
+    load(cursor)
+
+
+def test_loads_articles_with_and_without_doi(cursor):
+    insert_raw(cursor, "doaj", "https://doaj.org/article/b", doaj("Artigo B", "10.1/b"))
+    insert_raw(cursor, "oai_emerj", "https://emerj/1", oai("Artigo A"))
+
+    transform_and_load(cursor)
+
+    assert sorted(row[1:] for row in dimension(cursor)) == [
+        ("doaj", "Artigo B", "10.1/b", "https://doaj.org/article/b", 2021),
+        ("oai_emerj", "Artigo A", None, "https://emerj/1", 2020),
+    ]
+
+
+def test_loading_twice_does_not_duplicate_an_article(cursor):
+    insert_raw(cursor, "doaj", "https://doaj.org/article/b", doaj("Artigo B", "10.1/b"))
+    insert_raw(cursor, "oai_emerj", "https://emerj/1", oai("Artigo A"))
+    transform_and_load(cursor)
+    first = dimension(cursor)
+
+    transform_and_load(cursor)
+
+    assert dimension(cursor) == first
+
+
+def test_updates_an_article_harvested_again(cursor):
+    insert_raw(cursor, "oai_emerj", "https://emerj/1", oai("Titulo antigo"),
+               collected_at="2026-09-01T00:00:00Z")
+    transform_and_load(cursor)
+    [(key, *_)] = dimension(cursor)
+
+    insert_raw(cursor, "oai_emerj", "https://emerj/1", oai("Titulo novo", dates=["2019"]),
+               collected_at="2026-09-10T00:00:00Z")
+    transform_and_load(cursor)
+
+    assert dimension(cursor) == [(key, "oai_emerj", "Titulo novo", None, "https://emerj/1", 2019)]
+
+
+def test_an_article_that_gains_a_doi_keeps_its_row(cursor):
+    insert_raw(cursor, "oai_emerj", "https://emerj/1", oai("Artigo A"),
+               collected_at="2026-09-01T00:00:00Z")
+    transform_and_load(cursor)
+    [(key, *_)] = dimension(cursor)
+
+    insert_raw(cursor, "oai_emerj", "https://emerj/1",
+               oai("Artigo A", ["https://doi.org/10.9/a", "https://emerj/1"]),
+               collected_at="2026-09-10T00:00:00Z")
+    transform_and_load(cursor)
+
+    assert dimension(cursor) == [(key, "oai_emerj", "Artigo A", "10.9/a", "https://emerj/1", 2020)]
+
+
+def test_every_loaded_article_has_a_doi_or_an_address(cursor):
+    insert_raw(cursor, "doaj", "https://doaj.org/article/b", doaj("Artigo B", "10.1/b"))
+    insert_raw(cursor, "oai_emerj", "https://emerj/1", oai("Artigo A"))
+
+    transform_and_load(cursor)
+
+    cursor.execute(
+        "SELECT count(*) FROM dw.dim_doctrine WHERE doi IS NULL AND article_url IS NULL"
+    )
+    assert cursor.fetchone() == (0,)
