@@ -57,14 +57,15 @@ def clean_database(dw_ready):
         cursor.execute(
             "TRUNCATE dw.fact_case_event, dw.bridge_case_subject, dw.bridge_theme_subject, "
             "dw.dim_case, dw.dim_theme, dw.dim_subject, dw.dim_movement, dw.dim_judging_body, "
-            "dw.dim_case_class, dw.dim_court, dw.dim_decision_outcome, dw.dim_date "
-            "RESTART IDENTITY CASCADE"
+            "dw.dim_case_class, dw.dim_court, dw.dim_decision_outcome, dw.dim_date, "
+            "dw.dim_doctrine RESTART IDENTITY CASCADE"
         )
         cursor.execute("TRUNCATE staging.case_event")
         ensure_theme_registry(cursor)
         cursor.execute("TRUNCATE etl.theme_registry RESTART IDENTITY CASCADE")
         ensure_raw(cursor)
         cursor.execute("TRUNCATE raw.datajud_case RESTART IDENTITY CASCADE")
+        cursor.execute("TRUNCATE raw.doctrine_article RESTART IDENTITY")
     return dw_ready
 
 

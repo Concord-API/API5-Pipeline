@@ -1,0 +1,292 @@
+[
+  {
+    "name": "AnuariodelAreaSocioJuridica",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/AnuariodelAreaSocioJuridica/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/AnuariodelAreaSocioJuridica"
+  },
+  {
+    "name": "HermeneuticaJuridica",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/HermeneuticaJuridica/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/HermeneuticaJuridica"
+  },
+  {
+    "name": "Socioambientalismo",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/Socioambientalismo/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/Socioambientalismo"
+  },
+  {
+    "name": "acessoajustica",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/acessoajustica/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/acessoajustica"
+  },
+  {
+    "name": "conpedireview",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/conpedireview/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/conpedireview"
+  },
+  {
+    "name": "culturajuridica",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/culturajuridica/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/culturajuridica"
+  },
+  {
+    "name": "direitocivil",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/direitocivil/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/direitocivil"
+  },
+  {
+    "name": "direitoempresarial",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/direitoempresarial/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/direitoempresarial"
+  },
+  {
+    "name": "direitofamilia",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/direitofamilia/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/direitofamilia"
+  },
+  {
+    "name": "direitointernacional",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/direitointernacional/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/direitointernacional"
+  },
+  {
+    "name": "direitopenal",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/direitopenal/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/direitopenal"
+  },
+  {
+    "name": "direitoshumanos",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/direitoshumanos/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/direitoshumanos"
+  },
+  {
+    "name": "direitotributario",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/direitotributario/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/direitotributario"
+  },
+  {
+    "name": "filosofiadireito",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/filosofiadireito/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/filosofiadireito"
+  },
+  {
+    "name": "garantiasfundamentais",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/garantiasfundamentais/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/garantiasfundamentais"
+  },
+  {
+    "name": "historiadireito",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/historiadireito/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/historiadireito"
+  },
+  {
+    "name": "rdaa",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/rdaa/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/rdaa"
+  },
+  {
+    "name": "rdagp",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/rdagp/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/rdagp"
+  },
+  {
+    "name": "rdb",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/rdb/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/rdb"
+  },
+  {
+    "name": "revistaDireitoUrbanistico",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistaDireitoUrbanistico/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistaDireitoUrbanistico"
+  },
+  {
+    "name": "revistaFADI",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistaFADI/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistaFADI",
+    "enabled": false,
+    "disabled_reason": "OAI endpoint requires access"
+  },
+  {
+    "name": "revistacpc",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistacpc/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistacpc"
+  },
+  {
+    "name": "revistaddsus",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistaddsus/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistaddsus"
+  },
+  {
+    "name": "revistadgnt",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistadgnt/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistadgnt"
+  },
+  {
+    "name": "revistadgrc",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistadgrc/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistadgrc"
+  },
+  {
+    "name": "revistadhe",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistadhe/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistadhe"
+  },
+  {
+    "name": "revistadipic",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistadipic/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistadipic"
+  },
+  {
+    "name": "revistadireitoarteliteratura",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistadireitoarteliteratura/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistadireitoarteliteratura"
+  },
+  {
+    "name": "revistadireitoiap",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistadireitoiap/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistadireitoiap"
+  },
+  {
+    "name": "revistadireitosfundamentais",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistadireitosfundamentais/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistadireitosfundamentais"
+  },
+  {
+    "name": "revistadspp",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistadspp/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistadspp"
+  },
+  {
+    "name": "revistadssps",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistadssps/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistadssps"
+  },
+  {
+    "name": "revistadtmat",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistadtmat/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistadtmat"
+  },
+  {
+    "name": "revistagsd",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistagsd/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistagsd"
+  },
+  {
+    "name": "revistamovimentosociais",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistamovimentosociais/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistamovimentosociais"
+  },
+  {
+    "name": "revistapoliticiajudiciaria",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistapoliticiajudiciaria/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistapoliticiajudiciaria"
+  },
+  {
+    "name": "revistaprocessojurisdicao",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistaprocessojurisdicao/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistaprocessojurisdicao"
+  },
+  {
+    "name": "revistarbda",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistarbda/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistarbda"
+  },
+  {
+    "name": "revistards",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistards/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistards"
+  },
+  {
+    "name": "revistasolucoesconflitos",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistasolucoesconflitos/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistasolucoesconflitos"
+  },
+  {
+    "name": "revistateoriasdemocracia",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistateoriasdemocracia/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistateoriasdemocracia"
+  },
+  {
+    "name": "revistateoriasfilosofias",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistateoriasfilosofias/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistateoriasfilosofias"
+  },
+  {
+    "name": "revistateoriasjustica",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/revistateoriasjustica/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/revistateoriasjustica"
+  },
+  {
+    "name": "rpej",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/rpej/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/rpej"
+  },
+  {
+    "name": "teoriaconstitucional",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/teoriaconstitucional/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/teoriaconstitucional"
+  },
+  {
+    "name": "teoriasdireito",
+    "source": "oai_indexlaw",
+    "oai_url": "https://www.indexlaw.org/index.php/teoriasdireito/oai",
+    "journal_url": "https://www.indexlaw.org/index.php/teoriasdireito"
+  },
+  {
+    "name": "emerj",
+    "source": "oai_emerj",
+    "oai_url": "https://ojs.emerj.com.br/index.php/revistadaemerj/oai",
+    "journal_url": "https://ojs.emerj.com.br/index.php/revistadaemerj"
+  },
+  {
+    "name": "ejef",
+    "source": "oai_ejef_tjmg",
+    "oai_url": "https://revistaejef.tjmg.jus.br/index.php/revista-ejef/oai",
+    "journal_url": "https://revistaejef.tjmg.jus.br/index.php/revista-ejef"
+  }
+]

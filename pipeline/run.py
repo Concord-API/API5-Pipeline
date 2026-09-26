@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
 
 from pipeline import (
+    doctrine_link,
     dw_case,
     dw_case_links,
     dw_date,
+    dw_doctrine,
     dw_fact,
     dw_movement_polarity,
     dw_reference,
@@ -18,6 +20,7 @@ from pipeline import (
     theme_narrative,
     theme_registry,
 )
+from pipeline.embedding import local_encoder
 from pipeline.staging_schema import ensure as ensure_staging
 from pipeline.transform import flatten
 
@@ -55,6 +58,8 @@ def load_dimensions(cursor, tpu, calendar_until):
     dw_movement_polarity.set_polarity(cursor)
     dw_case_links.format_case_numbers(cursor)
     dw_case_links.set_source_links(cursor)
+    dw_doctrine.transform(cursor)
+    dw_doctrine.load(cursor)
 
 
 def subject_pairs(cursor):
@@ -70,10 +75,11 @@ def load_themes(cursor, groups):
     theme_load.assert_no_orphan_themes(cursor)
 
 
-def run(cursor, dsn, tpu, groups, output_path, runner=None):
+def run(cursor, dsn, tpu, groups, output_path, runner=None, encoder=local_encoder):
     today = datetime.now(timezone.utc).date()
     transform_all(cursor, tpu)
     load_dimensions(cursor, tpu, today.year + 1)
+    doctrine_link.link(cursor, encoder)
     load_themes(cursor, groups)
     strength_config.seed(cursor, today.year)
     search_synonym.seed(cursor, search_synonym.load())
