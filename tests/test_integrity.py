@@ -53,13 +53,17 @@ def loaded(postgres_container, dw_ready, tpu, tmp_path_factory):
         cursor.execute("TRUNCATE etl.theme_registry RESTART IDENTITY CASCADE")
         ensure_raw(cursor)
         cursor.execute("TRUNCATE raw.datajud_case RESTART IDENTITY CASCADE")
+        cursor.execute("TRUNCATE raw.doctrine_article RESTART IDENTITY")
         cursor.execute(
             "INSERT INTO raw.datajud_case (tribunal, source_url, payload_hash, payload) "
             "VALUES ('tjsp', 'https://x', 'h1', %s)",
             (CASE,),
         )
         output_path = tmp_path_factory.mktemp("load") / "load.sql"
-        run(cursor, local_dsn, tpu, groups=[], output_path=output_path, runner=container_runner)
+        run(
+            cursor, local_dsn, tpu, groups=[], output_path=output_path,
+            runner=container_runner, encoder=lambda texts: [[1.0] for _ in texts],
+        )
         connection.commit()
     return dw_ready
 
