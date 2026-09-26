@@ -33,6 +33,19 @@ def insert_raw_case(cursor):
     )
 
 
+def insert_raw_doctrine(cursor):
+    payload = {
+        "title": "Dano moral e inscrição indevida", "identifiers": ["https://emerj/artigo/1"],
+        "dates": ["2021-05-01"], "creators": ["Autora, Ana"], "source": "Revista da EMERJ",
+    }
+    cursor.execute(
+        "INSERT INTO raw.doctrine_article "
+        "(source, source_url, collected_at, payload_hash, payload) "
+        "VALUES ('oai_emerj', 'https://emerj/artigo/1', %s, 'd1', %s)",
+        (datetime.now(timezone.utc), json.dumps(payload)),
+    )
+
+
 def run_once(postgres_container, dw_ready, tmp_path):
     tpu = load_tpu(FIXTURE_TPU)
     local_dsn = (
@@ -50,7 +63,8 @@ def run_once(postgres_container, dw_ready, tmp_path):
         cursor.execute(
             "TRUNCATE dw.fact_case_event, dw.bridge_case_subject, dw.bridge_theme_subject, "
             "dw.dim_case, dw.dim_theme, dw.dim_subject, dw.dim_movement, dw.dim_judging_body, "
-            "dw.dim_case_class, dw.dim_court, dw.dim_decision_outcome, dw.dim_date "
+            "dw.dim_case_class, dw.dim_court, dw.dim_decision_outcome, dw.dim_date, "
+            "dw.dim_doctrine "
             "RESTART IDENTITY CASCADE"
         )
         cursor.execute("TRUNCATE staging.case_event")
@@ -61,6 +75,8 @@ def run_once(postgres_container, dw_ready, tmp_path):
         ensure_raw(cursor)
         cursor.execute("TRUNCATE raw.datajud_case RESTART IDENTITY CASCADE")
         insert_raw_case(cursor)
+        cursor.execute("TRUNCATE raw.doctrine_article RESTART IDENTITY")
+        insert_raw_doctrine(cursor)
 
         output_path = tmp_path / "load.sql"
         run(cursor, local_dsn, tpu, groups=[], output_path=output_path, runner=container_runner)
@@ -82,6 +98,7 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
     assert "COPY dw.theme_narrative" in content
     assert "COPY dw.dim_date" in content
     assert "negativado\tinclusao indevida cadastro inadimplentes" in content
+    assert "Dano moral e inscrição indevida\tAutora, Ana" in content
 
     with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
         cursor.execute("REFRESH MATERIALIZED VIEW dw.case_current_result")
@@ -95,6 +112,8 @@ def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_pat
         assert cursor.fetchall() == [("1.0", datetime.now(timezone.utc).year)]
         cursor.execute("SELECT text_origin, jsonb_array_length(lead) FROM dw.theme_narrative")
         assert cursor.fetchall() == [("template", 3)]
+        cursor.execute("SELECT source, article_url FROM dw.dim_doctrine")
+        assert cursor.fetchall() == [("oai_emerj", "https://emerj/artigo/1")]
         cursor.execute("SELECT count(*) FROM dw.search_synonym")
         assert cursor.fetchone() == (len(load_search_synonyms()),)
 
