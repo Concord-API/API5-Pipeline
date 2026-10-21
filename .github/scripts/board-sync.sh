@@ -73,7 +73,7 @@ main() {
     fi
   fi
 
-  if [[ "$status" == "Done" ]]; then
+  if [[ "$status" == "Done" ]] && [[ "$(gh issue view "$issue" -R "$BOARD_REPO" --json state --jq .state)" != "CLOSED" ]]; then
     gh issue close "$issue" -R "$BOARD_REPO" --reason completed >/dev/null
   fi
 }

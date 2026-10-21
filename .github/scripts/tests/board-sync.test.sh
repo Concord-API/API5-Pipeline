@@ -36,7 +36,13 @@ cat >"$sandbox/bin/gh" <<'EOF'
 echo "gh $*" >>"$GH_LOG"
 case "$1 $2" in
   "issue list") printf '%s' "${FAKE_ISSUE-}" ;;
-  "issue view") printf '%s' "${FAKE_COMMENTS-}" ;;
+  "issue view")
+    if [[ "$*" == *"--json state"* ]]; then
+      printf '%s' "${FAKE_ISSUE_STATE-OPEN}"
+    else
+      printf '%s' "${FAKE_COMMENTS-}"
+    fi
+    ;;
   "project view") echo "PVT_1" ;;
   "project field-list") echo "FIELD_1 OPTION_1" ;;
   "project item-add") echo "ITEM_1" ;;
@@ -101,6 +107,11 @@ assert_not_contains "reopened does not repeat the comment" "issue comment" "$cal
 run EVENT=closed BRANCH=0.12-Create-the-dw-schema MERGED=true PR_URL="$pr" FAKE_ISSUE=102
 assert_contains "merged looks up Done" '"Done"' "$calls"
 assert_contains "merged closes the issue" "issue close 102 -R Concord-API/API-5 --reason completed" "$calls"
+
+run EVENT=closed BRANCH=0.12-Create-the-dw-schema MERGED=true PR_URL="$pr" FAKE_ISSUE=102 FAKE_ISSUE_STATE=CLOSED
+assert_eq "merged with the issue already closed succeeds" "0" "$status"
+assert_contains "merged with the issue already closed still moves the card" '"Done"' "$calls"
+assert_not_contains "merged with the issue already closed does not close it again" "issue close" "$calls"
 
 run EVENT=closed BRANCH=0.12-Create-the-dw-schema MERGED=false PR_URL="$pr" FAKE_ISSUE=102
 assert_contains "closed without merge looks up In Progress" '"In Progress"' "$calls"
