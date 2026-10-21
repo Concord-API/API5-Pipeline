@@ -1,5 +1,32 @@
 from pipeline.dump import dump_data
 
+SCRIPT_FILE_NAME = r"regexp_replace(scriptname, '^.*Scripts\.', '')"
+
+
+def schema_version(cursor):
+    cursor.execute(f"SELECT max({SCRIPT_FILE_NAME}) FROM migrations.schema_versions")
+    return cursor.fetchone()[0]
+
+
+def version_guard(version):
+    expected = version.replace("'", "''")
+    return f"""DO $$
+DECLARE
+    applied text;
+BEGIN
+    IF to_regclass('migrations.schema_versions') IS NULL THEN
+        RAISE EXCEPTION 'O banco não foi migrado pela API: suba a API antes de carregar o arquivo.';
+    END IF;
+    SELECT max({SCRIPT_FILE_NAME}) INTO applied FROM migrations.schema_versions;
+    IF applied IS DISTINCT FROM '{expected}' THEN
+        RAISE EXCEPTION
+            'Versão de schema diferente: o arquivo de carga é da % e o banco está na %.',
+            '{expected}', coalesce(applied, 'nenhuma')
+            USING HINT = 'Use o arquivo de carga da mesma versão da API.';
+    END IF;
+END
+$$;"""
+
 
 def table_names(cursor):
     cursor.execute(
@@ -48,10 +75,11 @@ def refresh_order(names, dependencies):
             sources.difference_update(ready)
     return order
 
-def build(tables, matviews, dump_sql):
+def build(tables, matviews, dump_sql, version):
     qualified = ", ".join(f"dw.{table}" for table in tables)
     parts = [
         "BEGIN;",
+        version_guard(version),
         f"TRUNCATE {qualified} RESTART IDENTITY CASCADE;",
         dump_sql,
     ]
@@ -61,10 +89,11 @@ def build(tables, matviews, dump_sql):
 
 
 def generate(cursor, dsn, output_path, runner=None):
+    version = schema_version(cursor)
     tables = table_names(cursor)
     matviews = matview_names(cursor)
     dump_sql = dump_data(dsn, schema="dw", **({"runner": runner} if runner else {}))
-    script = build(tables, matviews, dump_sql)
+    script = build(tables, matviews, dump_sql, version)
     with open(output_path, "w", encoding="utf-8") as handle:
         handle.write(script)
     return output_path
