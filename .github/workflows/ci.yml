@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, 'us*']
   push:
-    branches: [main, 'us*']
+    branches: [main]
   workflow_dispatch:
 
 permissions:
