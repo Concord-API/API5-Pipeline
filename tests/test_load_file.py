@@ -1,7 +1,15 @@
 import psycopg2
 import pytest
 
-from pipeline.load_file import build, matview_names, refresh_order, schema_version, table_names
+from pipeline.load_file import (
+    build,
+    manifest,
+    manifest_path,
+    matview_names,
+    refresh_order,
+    schema_version,
+    table_names,
+)
 
 VERSION = "V016__add_strength_settings.sql"
 
@@ -154,3 +162,24 @@ def test_load_on_a_database_the_api_never_migrated_fails_with_a_clear_message(dw
         connection.rollback()
 
     assert "não foi migrado pela API" in str(error.value)
+
+
+def test_manifest_path_sits_beside_the_load_file(tmp_path):
+    assert manifest_path(tmp_path / "ratio-load.sql") == tmp_path / "ratio-load.manifest.json"
+
+
+def test_manifest_has_the_schema_version_and_each_table_count(dw_ready):
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cur:
+        cur.execute("TRUNCATE dw.dim_court RESTART IDENTITY CASCADE")
+        cur.execute(
+            "INSERT INTO dw.dim_court (court_code, court_name, state_uf) VALUES "
+            "('TJSP', 'Tribunal de Justiça de São Paulo', 'SP'), "
+            "('TJRJ', 'Tribunal de Justiça do Rio de Janeiro', 'RJ')"
+        )
+        connection.commit()
+
+        result = manifest(cur, VERSION, ["dim_court", "fact_case_event"])
+
+    assert result["schema_version"] == VERSION
+    assert result["tables"] == {"dim_court": 2, "fact_case_event": 0}
+    assert result["extracted_at"] is None

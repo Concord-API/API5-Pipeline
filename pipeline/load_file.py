@@ -1,3 +1,8 @@
+import json
+from pathlib import Path
+
+from psycopg2 import sql
+
 from pipeline.dump import dump_data
 
 SCRIPT_FILE_NAME = r"regexp_replace(scriptname, '^.*Scripts\.', '')"
@@ -26,6 +31,25 @@ BEGIN
     END IF;
 END
 $$;"""
+
+
+def manifest_path(output_path):
+    path = Path(output_path)
+    return path.with_name(f"{path.stem}.manifest.json")
+
+
+def manifest(cursor, version, tables):
+    counts = {}
+    for table in tables:
+        cursor.execute(sql.SQL("SELECT count(*) FROM dw.{}").format(sql.Identifier(table)))
+        counts[table] = cursor.fetchone()[0]
+    cursor.execute("SELECT max(extracted_at) FROM dw.fact_case_event")
+    extracted_at = cursor.fetchone()[0]
+    return {
+        "schema_version": version,
+        "extracted_at": extracted_at.isoformat() if extracted_at else None,
+        "tables": counts,
+    }
 
 
 def table_names(cursor):
@@ -96,4 +120,6 @@ def generate(cursor, dsn, output_path, runner=None):
     script = build(tables, matviews, dump_sql, version)
     with open(output_path, "w", encoding="utf-8") as handle:
         handle.write(script)
+    with open(manifest_path(output_path), "w", encoding="utf-8") as handle:
+        json.dump(manifest(cursor, version, tables), handle, ensure_ascii=False, indent=2)
     return output_path

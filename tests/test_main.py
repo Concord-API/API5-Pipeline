@@ -95,12 +95,14 @@ def environment(monkeypatch, clean_database, tmp_path):
     return output_path
 
 
-def test_harvests_and_writes_the_load_file(environment, container_runner):
+def test_harvests_and_writes_the_load_file(environment, container_runner, capsys):
     factory = SessionFactory()
 
     exit_code = main([], session_factory=factory, runner=container_runner)
 
     assert exit_code == 0
+    assert environment.with_name(environment.stem + ".manifest.json").exists()
+    assert "manifest:" in capsys.readouterr().out
     assert factory.keys == ["public-key"]
     content = environment.read_text(encoding="utf-8")
     assert content.startswith("BEGIN;")

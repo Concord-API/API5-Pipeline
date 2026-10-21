@@ -94,6 +94,21 @@ def run_once(postgres_container, dw_ready, tmp_path):
     return output_path.read_text(encoding="utf-8")
 
 
+def test_run_writes_the_manifest_beside_the_load_file(postgres_container, dw_ready, tmp_path):
+    run_once(postgres_container, dw_ready, tmp_path)
+
+    manifest = json.loads((tmp_path / "load.manifest.json").read_text(encoding="utf-8"))
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT max(extracted_at) FROM dw.fact_case_event")
+        extracted_at = cursor.fetchone()[0]
+
+    assert manifest["schema_version"] == "V016__add_strength_settings.sql"
+    assert manifest["extracted_at"] == extracted_at.isoformat()
+    assert manifest["tables"]["fact_case_event"] == 1
+    assert manifest["tables"]["dim_theme"] == 1
+    assert "case_current_result" not in manifest["tables"]
+
+
 def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_path):
     content = run_once(postgres_container, dw_ready, tmp_path)
 

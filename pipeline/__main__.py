@@ -4,6 +4,7 @@ import sys
 import psycopg2
 
 from pipeline import config, harvest, integrity, theme_build, tpu
+from pipeline.load_file import manifest_path
 from pipeline.raw_schema import ensure as ensure_raw
 from pipeline.run import run
 
@@ -54,6 +55,7 @@ def main(argv=None, session_factory=harvest.new_session, runner=None) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 1
     print(f"load file: {output_path}")
+    print(f"manifest: {manifest_path(output_path)}")
     return 0
 
 
