@@ -36,6 +36,12 @@ def read_manifest(load_path):
     return manifest
 
 
+def pipeline_commit(runner):
+    if runner(["git", "status", "--porcelain"]).strip():
+        raise PublishError("o pipeline tem alterações não commitadas: publique de um commit")
+    return runner(["git", "rev-parse", "HEAD"]).strip()
+
+
 def release_exists(tag, runner):
     try:
         runner(["gh", "release", "view", tag, "--repo", REPOSITORY])
@@ -54,11 +60,11 @@ def package(load_path, tag):
     return zip_path, checksum_path
 
 
-def notes(manifest):
+def notes(manifest, commit):
     rows = "\n".join(f"| {table} | {count} |" for table, count in manifest["tables"].items())
     return (
         f"Carga do `dw` para a versão de schema `{manifest['schema_version']}`, "
-        f"extraída em {manifest['extracted_at']}.\n\n"
+        f"extraída em {manifest['extracted_at']}, gerada pelo pipeline no commit `{commit}`.\n\n"
         "| Tabela | Linhas |\n|---|---:|\n"
         f"{rows}\n"
     )
@@ -67,6 +73,7 @@ def notes(manifest):
 def publish(load_path, runner=_subprocess_runner):
     load_path = Path(load_path)
     manifest = read_manifest(load_path)
+    commit = pipeline_commit(runner)
     tag = release_tag(manifest)
     if release_exists(tag, runner):
         raise PublishError(f"a release {tag} já existe: esta carga já foi publicada")
@@ -74,7 +81,7 @@ def publish(load_path, runner=_subprocess_runner):
     runner([
         "gh", "release", "create", tag,
         str(zip_path), str(checksum_path), str(manifest_path(load_path)),
-        "--repo", REPOSITORY, "--title", tag, "--notes", notes(manifest),
+        "--repo", REPOSITORY, "--title", tag, "--notes", notes(manifest, commit),
     ])
     return tag
 
