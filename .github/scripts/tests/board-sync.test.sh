@@ -57,7 +57,8 @@ source "$script"
 
 assert_eq "task id from a foundation branch" "0.12" "$(task_id 0.12-Create-the-dw-schema-migration)"
 assert_eq "task id from a story branch" "21.3" "$(task_id 21.3-Show-the-related-doctrine)"
-for branch in us1 us0 main RATIO-DOCS-Contribution-Standards 0.12 release-workflow; do
+assert_eq "task id from a prefixed branch" "DVP-01" "$(task_id DVP-01-Reuse-the-test-coverage)"
+for branch in us1 us0 main RATIO-DOCS-Contribution-Standards 0.12 DVP-01 dvp-01-Reuse-the-test-coverage release-workflow; do
   if task_id "$branch" >/dev/null; then
     fail "no task id for $branch"
   fi
@@ -83,6 +84,11 @@ assert_contains "branch push adds the issue to the board" "project item-add 5 --
 assert_contains "branch push moves the card" "project item-edit --id ITEM_1 --project-id PVT_1 --field-id FIELD_1 --single-select-option-id OPTION_1" "$calls"
 assert_contains "branch push looks up In Progress" '"In Progress"' "$calls"
 assert_not_contains "branch push does not comment" "issue comment" "$calls"
+
+run EVENT=branch BRANCH=DVP-01-Reuse-the-test-coverage MERGED=false PR_URL= FAKE_ISSUE=247
+assert_eq "prefixed branch push succeeds" "0" "$status"
+assert_contains "prefixed branch push searches the task id" '"DVP-01" in:title' "$calls"
+assert_contains "prefixed branch push moves the card" "project item-add 5 --owner Concord-API --url https://github.com/Concord-API/API-5/issues/247" "$calls"
 
 pr="https://github.com/Concord-API/API5-Backend/pull/7"
 run EVENT=opened BRANCH=0.12-Create-the-dw-schema MERGED=false PR_URL="$pr" FAKE_ISSUE=102 FAKE_COMMENTS=
