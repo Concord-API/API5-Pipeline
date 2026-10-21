@@ -5,7 +5,7 @@ BOARD_REPO="Concord-API/API-5"
 BOARD_NUMBER=5
 
 task_id() {
-  if [[ "$1" =~ ^([0-9]+\.[0-9]+)- ]]; then
+  if [[ "$1" =~ ^([0-9]+\.[0-9]+|[A-Z]+-[0-9]+)- ]]; then
     echo "${BASH_REMATCH[1]}"
   else
     return 1
