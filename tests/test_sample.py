@@ -4,7 +4,7 @@ import psycopg2
 import pytest
 
 from pipeline.raw_schema import ensure as ensure_raw
-from pipeline.sample import SampleError, build
+from pipeline.sample import SampleError, build, main
 from pipeline.theme_registry import ensure as ensure_theme_registry
 
 
@@ -76,3 +76,40 @@ def test_build_refuses_a_database_that_already_has_collected_cases(empty_databas
 
         cursor.execute("SELECT payload_hash FROM raw.datajud_case")
         assert cursor.fetchall() == [("real-1",)]
+
+
+def test_main_builds_the_sample_from_the_settings(
+    empty_database, container_runner, tmp_path, monkeypatch, capsys
+):
+    output_path = tmp_path / "ratio-sample.sql"
+    monkeypatch.setenv("DATABASE_URL", empty_database)
+
+    exit_code = main([str(output_path)], runner=container_runner)
+
+    assert exit_code == 0
+    assert output_path.exists()
+    assert f"sample: {output_path}" in capsys.readouterr().out
+
+
+def test_main_fails_clearly_without_the_database_url(monkeypatch, capsys):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    exit_code = main(["ratio-sample.sql"])
+
+    assert exit_code == 1
+    assert "DATABASE_URL" in capsys.readouterr().err
+
+
+def test_main_refuses_a_database_with_collected_cases(empty_database, monkeypatch, capsys):
+    with psycopg2.connect(empty_database) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO raw.datajud_case "
+            "(tribunal, source_url, collected_at, payload_hash, payload) "
+            "VALUES ('tjsp', 'https://x', now(), 'real-1', '{}')"
+        )
+    monkeypatch.setenv("DATABASE_URL", empty_database)
+
+    exit_code = main(["ratio-sample.sql"])
+
+    assert exit_code == 1
+    assert "banco vazio" in capsys.readouterr().err
