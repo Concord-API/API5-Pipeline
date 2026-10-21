@@ -45,7 +45,7 @@ def build(cursor, dsn, output_path, runner=None):
     return run(cursor, dsn, tpu.load(), theme_build.load_groups(), output_path, runner=runner)
 
 
-def main(argv=None) -> int:
+def main(argv=None, runner=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     config.load_env()
     output_path = argv[0] if argv else "ratio-sample.sql"
@@ -54,7 +54,7 @@ def main(argv=None) -> int:
         connection = psycopg2.connect(dsn)
         try:
             with connection.cursor() as cursor:
-                build(cursor, dsn, output_path)
+                build(cursor, dsn, output_path, runner=runner)
             connection.commit()
         finally:
             connection.close()
