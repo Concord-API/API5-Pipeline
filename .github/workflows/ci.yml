@@ -43,6 +43,7 @@ jobs:
 
   quality:
     name: Pipeline quality
+    needs: tests
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -60,17 +61,11 @@ jobs:
         if: ${{ env.SONAR_ENABLED == 'true' }}
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5
+      - name: Download the test results and coverage
         if: ${{ env.SONAR_ENABLED == 'true' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          python-version: '3.12'
-          cache: pip
-      - name: Install dependencies
-        if: ${{ env.SONAR_ENABLED == 'true' }}
-        run: pip install -r requirements.txt
-      - name: Run tests with coverage
-        if: ${{ env.SONAR_ENABLED == 'true' }}
-        run: pytest --cov=pipeline --cov-branch --cov-report=xml:coverage.xml --junitxml=test-results/pytest.xml
+          name: pipeline-test-results-${{ github.sha }}
       - name: Send the analysis and wait for the quality gate
         if: ${{ env.SONAR_ENABLED == 'true' }}
         uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
