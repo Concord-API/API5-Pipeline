@@ -29,8 +29,17 @@ jobs:
         run: pip install -r requirements.txt
       - name: Lint
         run: ruff check .
-      - name: Run tests
-        run: pytest
+      - name: Run tests with coverage
+        run: pytest --cov=pipeline --cov-branch --cov-report=xml:coverage.xml --junitxml=test-results/pytest.xml
+      - name: Upload test results and coverage
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pipeline-test-results-${{ github.sha }}
+          path: |
+            coverage.xml
+            test-results/
+          retention-days: 14
 
   quality:
     name: Pipeline quality
