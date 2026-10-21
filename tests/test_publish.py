@@ -13,15 +13,21 @@ MANIFEST = {
     "tables": {"dim_court": 3, "fact_case_event": 120},
 }
 TAG = "load-20261001-V016"
+COMMIT = "4acd4db9f1c2e3d4b5a6978812345678abcdef01"
 
 
 class FakeGh:
-    def __init__(self, existing=()):
+    def __init__(self, existing=(), changes=""):
         self.calls = []
         self.existing = set(existing)
+        self.changes = changes
 
     def __call__(self, argv):
         self.calls.append(argv)
+        if argv[:2] == ["git", "rev-parse"]:
+            return f"{COMMIT}\n"
+        if argv[:2] == ["git", "status"]:
+            return self.changes
         if argv[:3] == ["gh", "release", "view"]:
             if argv[3] in self.existing:
                 return TAG
@@ -118,3 +124,21 @@ def test_main_reports_a_refused_publication(load_file, monkeypatch, capsys):
 
     assert exit_code == 1
     assert "já existe" in capsys.readouterr().err
+
+
+def test_publish_records_the_pipeline_commit_in_the_notes(load_file):
+    gh = FakeGh()
+
+    publish(load_file, runner=gh)
+
+    create = gh.created()[0]
+    assert COMMIT in create[create.index("--notes") + 1]
+
+
+def test_publish_refuses_a_pipeline_with_uncommitted_changes(load_file):
+    gh = FakeGh(changes=" M pipeline/run.py\n")
+
+    with pytest.raises(PublishError, match="não commitadas"):
+        publish(load_file, runner=gh)
+
+    assert gh.created() == []
