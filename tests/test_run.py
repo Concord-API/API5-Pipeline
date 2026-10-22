@@ -52,7 +52,7 @@ def insert_raw_stj_case(cursor):
     payload = {
         "numeroProcesso": "00000020020245000000",
         "grau": "SUP",
-        "classe": {"codigo": 7, "nome": "Procedimento Comum Cível"},
+        "classe": {"codigo": 1032, "nome": "Recurso Especial"},
         "orgaoJulgador": {"codigo": 900, "nome": "Terceira Turma"},
         "dataAjuizamento": "2024-01-15T10:00:00Z",
         "nivelSigilo": 0,
@@ -154,15 +154,19 @@ def test_run_writes_the_manifest_beside_the_load_file(postgres_container, dw_rea
     assert "case_current_result" not in manifest["tables"]
 
 
-def test_run_keeps_a_stj_case_out_of_the_dw_until_the_stj_is_seeded(
-    postgres_container, dw_ready, tmp_path
-):
+def test_run_loads_a_stj_case_at_the_superior_level(postgres_container, dw_ready, tmp_path):
     content = run_once(postgres_container, dw_ready, tmp_path, extra_raw=[insert_raw_stj_case])
 
     with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
-        cursor.execute("SELECT case_number FROM dw.dim_case")
-        assert cursor.fetchall() == [("00000010020248260100",)]
-    assert "00000020020245000000" not in content
+        cursor.execute(
+            "SELECT dc.case_number, c.court_code, dc.court_level FROM dw.dim_case dc "
+            "JOIN dw.dim_court c ON c.court_sk = dc.court_sk ORDER BY dc.case_number"
+        )
+        assert cursor.fetchall() == [
+            ("00000010020248260100", "TJSP", "First"),
+            ("00000020020245000000", "STJ", "Superior"),
+        ]
+    assert "00000020020245000000" in content
 
 
 def test_run_measures_the_cases_decided_in_more_than_one_court(
