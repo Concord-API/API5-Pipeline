@@ -4,7 +4,7 @@ from pipeline.datajud import collect as datajud_collect
 from pipeline.dw_reference import verified_movement_codes
 from pipeline.tpu import datajud_civil_query
 
-TRIBUNALS = ("tjsp", "tjrj", "tjmg")
+TRIBUNALS = ("tjsp", "tjrj", "tjmg", "stj")
 
 CORE_QUOTA = 700
 SUPPORT_QUOTA = 250
