@@ -12,6 +12,7 @@ from pipeline.raw_schema import ensure as ensure_raw
 from pipeline.run import run
 from pipeline.search_synonym import load as load_search_synonyms
 from pipeline.theme_registry import ensure as ensure_theme_registry
+from pipeline.top_up import themes_with_at_least, thin_subject_codes
 from pipeline.tpu import load as load_tpu
 
 FIXTURE_TPU = os.path.join(os.path.dirname(__file__), "fixtures", "tpu_sample.json")
@@ -213,6 +214,17 @@ def test_run_counts_the_stj_decisions_outside_a_panel(postgres_container, dw_rea
 
     manifest = json.loads((tmp_path / "load.manifest.json").read_text(encoding="utf-8"))
     assert manifest["unmapped_stj_judging_bodies"] == 1
+
+
+def test_lists_the_subjects_of_the_themes_below_five_judged_cases(
+    postgres_container, dw_ready, tmp_path
+):
+    run_once(postgres_container, dw_ready, tmp_path)
+
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        assert thin_subject_codes(cursor) == [1127]
+        assert themes_with_at_least(cursor, 1) == 1
+        assert themes_with_at_least(cursor, 5) == 0
 
 
 def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_path):
