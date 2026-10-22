@@ -1,0 +1,422 @@
+[
+  {
+    "tribunal": "tjsp",
+    "payload": {
+      "numeroProcesso": "00001010020248260100",
+      "grau": "G1",
+      "classe": {
+        "codigo": 7,
+        "nome": "Procedimento Comum Cível"
+      },
+      "orgaoJulgador": {
+        "codigo": 126,
+        "nome": "1ª Vara Cível de São Paulo"
+      },
+      "dataAjuizamento": "2024-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 6226,
+          "nome": "Inclusão Indevida em Cadastro de Inadimplentes"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 219,
+          "nome": "Procedência",
+          "dataHora": "2024-09-15T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "tjsp",
+    "payload": {
+      "numeroProcesso": "00001020020248260100",
+      "grau": "G1",
+      "classe": {
+        "codigo": 7,
+        "nome": "Procedimento Comum Cível"
+      },
+      "orgaoJulgador": {
+        "codigo": 126,
+        "nome": "1ª Vara Cível de São Paulo"
+      },
+      "dataAjuizamento": "2024-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 6226,
+          "nome": "Inclusão Indevida em Cadastro de Inadimplentes"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 219,
+          "nome": "Procedência",
+          "dataHora": "2024-09-15T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "tjsp",
+    "payload": {
+      "numeroProcesso": "00001030020248260100",
+      "grau": "G1",
+      "classe": {
+        "codigo": 7,
+        "nome": "Procedimento Comum Cível"
+      },
+      "orgaoJulgador": {
+        "codigo": 126,
+        "nome": "1ª Vara Cível de São Paulo"
+      },
+      "dataAjuizamento": "2024-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 6226,
+          "nome": "Inclusão Indevida em Cadastro de Inadimplentes"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 219,
+          "nome": "Procedência",
+          "dataHora": "2024-09-15T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "tjsp",
+    "payload": {
+      "numeroProcesso": "00001040020248260100",
+      "grau": "G1",
+      "classe": {
+        "codigo": 7,
+        "nome": "Procedimento Comum Cível"
+      },
+      "orgaoJulgador": {
+        "codigo": 126,
+        "nome": "1ª Vara Cível de São Paulo"
+      },
+      "dataAjuizamento": "2024-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 6226,
+          "nome": "Inclusão Indevida em Cadastro de Inadimplentes"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 220,
+          "nome": "Improcedência",
+          "dataHora": "2024-09-15T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "tjrj",
+    "payload": {
+      "numeroProcesso": "00001050020258190100",
+      "grau": "G1",
+      "classe": {
+        "codigo": 7,
+        "nome": "Procedimento Comum Cível"
+      },
+      "orgaoJulgador": {
+        "codigo": 119,
+        "nome": "2ª Vara Cível do Rio de Janeiro"
+      },
+      "dataAjuizamento": "2025-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 6226,
+          "nome": "Inclusão Indevida em Cadastro de Inadimplentes"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 219,
+          "nome": "Procedência",
+          "dataHora": "2025-09-15T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "tjrj",
+    "payload": {
+      "numeroProcesso": "00001060020258190100",
+      "grau": "G1",
+      "classe": {
+        "codigo": 7,
+        "nome": "Procedimento Comum Cível"
+      },
+      "orgaoJulgador": {
+        "codigo": 119,
+        "nome": "2ª Vara Cível do Rio de Janeiro"
+      },
+      "dataAjuizamento": "2025-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 6226,
+          "nome": "Inclusão Indevida em Cadastro de Inadimplentes"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 219,
+          "nome": "Procedência",
+          "dataHora": "2025-09-15T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "tjrj",
+    "payload": {
+      "numeroProcesso": "00001070020258190100",
+      "grau": "G1",
+      "classe": {
+        "codigo": 7,
+        "nome": "Procedimento Comum Cível"
+      },
+      "orgaoJulgador": {
+        "codigo": 119,
+        "nome": "2ª Vara Cível do Rio de Janeiro"
+      },
+      "dataAjuizamento": "2025-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 6226,
+          "nome": "Inclusão Indevida em Cadastro de Inadimplentes"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 220,
+          "nome": "Improcedência",
+          "dataHora": "2025-09-15T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "tjmg",
+    "payload": {
+      "numeroProcesso": "00001080020238130100",
+      "grau": "G1",
+      "classe": {
+        "codigo": 7,
+        "nome": "Procedimento Comum Cível"
+      },
+      "orgaoJulgador": {
+        "codigo": 113,
+        "nome": "3ª Vara Cível de Belo Horizonte"
+      },
+      "dataAjuizamento": "2023-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 7780,
+          "nome": "Tarifas Bancárias"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 219,
+          "nome": "Procedência",
+          "dataHora": "2023-09-15T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "tjmg",
+    "payload": {
+      "numeroProcesso": "00001090020238130100",
+      "grau": "G1",
+      "classe": {
+        "codigo": 7,
+        "nome": "Procedimento Comum Cível"
+      },
+      "orgaoJulgador": {
+        "codigo": 113,
+        "nome": "3ª Vara Cível de Belo Horizonte"
+      },
+      "dataAjuizamento": "2023-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 7780,
+          "nome": "Tarifas Bancárias"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 220,
+          "nome": "Improcedência",
+          "dataHora": "2023-09-15T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "tjsp",
+    "payload": {
+      "numeroProcesso": "00001100020248260100",
+      "grau": "G1",
+      "classe": {
+        "codigo": 7,
+        "nome": "Procedimento Comum Cível"
+      },
+      "orgaoJulgador": {
+        "codigo": 126,
+        "nome": "1ª Vara Cível de São Paulo"
+      },
+      "dataAjuizamento": "2024-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 7780,
+          "nome": "Tarifas Bancárias"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 219,
+          "nome": "Procedência",
+          "dataHora": "2024-09-15T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "tjrj",
+    "payload": {
+      "numeroProcesso": "00001110020238190100",
+      "grau": "G1",
+      "classe": {
+        "codigo": 7,
+        "nome": "Procedimento Comum Cível"
+      },
+      "orgaoJulgador": {
+        "codigo": 119,
+        "nome": "2ª Vara Cível do Rio de Janeiro"
+      },
+      "dataAjuizamento": "2023-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 10433,
+          "nome": "Indenização por Dano Moral"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 219,
+          "nome": "Procedência",
+          "dataHora": "2023-09-15T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "tjmg",
+    "payload": {
+      "numeroProcesso": "00001120020248130100",
+      "grau": "G1",
+      "classe": {
+        "codigo": 7,
+        "nome": "Procedimento Comum Cível"
+      },
+      "orgaoJulgador": {
+        "codigo": 113,
+        "nome": "3ª Vara Cível de Belo Horizonte"
+      },
+      "dataAjuizamento": "2024-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 10433,
+          "nome": "Indenização por Dano Moral"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 220,
+          "nome": "Improcedência",
+          "dataHora": "2024-09-15T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "stj",
+    "payload": {
+      "numeroProcesso": "00001010020248260100",
+      "grau": "SUP",
+      "classe": {
+        "codigo": 1032,
+        "nome": "Recurso Especial"
+      },
+      "orgaoJulgador": {
+        "codigo": 9003,
+        "nome": "Terceira Turma"
+      },
+      "dataAjuizamento": "2024-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 6226,
+          "nome": "Inclusão Indevida em Cadastro de Inadimplentes"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 239,
+          "nome": "Não-Provimento",
+          "dataHora": "2025-11-20T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "stj",
+    "payload": {
+      "numeroProcesso": "00001020020248260100",
+      "grau": "SUP",
+      "classe": {
+        "codigo": 1032,
+        "nome": "Recurso Especial"
+      },
+      "orgaoJulgador": {
+        "codigo": 9003,
+        "nome": "Terceira Turma"
+      },
+      "dataAjuizamento": "2024-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 6226,
+          "nome": "Inclusão Indevida em Cadastro de Inadimplentes"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 237,
+          "nome": "Provimento",
+          "dataHora": "2025-11-20T12:00:00Z"
+        }
+      ]
+    }
+  }
+]

@@ -12,6 +12,7 @@ from pipeline.raw_schema import ensure as ensure_raw
 from pipeline.run import run
 from pipeline.search_synonym import load as load_search_synonyms
 from pipeline.theme_registry import ensure as ensure_theme_registry
+from pipeline.top_up import themes_with_at_least, thin_subject_codes
 from pipeline.tpu import load as load_tpu
 
 FIXTURE_TPU = os.path.join(os.path.dirname(__file__), "fixtures", "tpu_sample.json")
@@ -48,11 +49,73 @@ def insert_raw_doctrine(cursor):
     )
 
 
+def insert_raw_stj_case(cursor):
+    payload = {
+        "numeroProcesso": "00000020020245000000",
+        "grau": "SUP",
+        "classe": {"codigo": 1032, "nome": "Recurso Especial"},
+        "orgaoJulgador": {"codigo": 900, "nome": "Terceira Turma"},
+        "dataAjuizamento": "2024-01-15T10:00:00Z",
+        "nivelSigilo": 0,
+        "assuntos": [{"codigo": 1127, "nome": "Contratos"}],
+        "movimentos": [{"codigo": 237, "nome": "Provimento", "dataHora": "2024-08-01T12:00:00Z"}],
+    }
+    cursor.execute(
+        "INSERT INTO raw.datajud_case (tribunal, source_url, collected_at, payload_hash, payload) "
+        "VALUES ('stj', 'https://x', %s, 'h-stj', %s)",
+        (datetime.now(timezone.utc), json.dumps(payload)),
+    )
+
+
+def insert_stj_appeal_of_the_tjsp_case(cursor):
+    cursor.execute(
+        "INSERT INTO dw.dim_court (court_code, court_name, state_uf) "
+        "VALUES ('STJ', 'Superior Tribunal de Justiça', 'DF') ON CONFLICT (court_code) DO NOTHING"
+    )
+    payload = {
+        "numeroProcesso": "00000010020248260100",
+        "grau": "SUP",
+        "classe": {"codigo": 1032, "nome": "Recurso Especial"},
+        "orgaoJulgador": {"codigo": 900, "nome": "Terceira Turma"},
+        "dataAjuizamento": "2024-01-15T10:00:00Z",
+        "nivelSigilo": 0,
+        "assuntos": [{"codigo": 1127, "nome": "Contratos"}],
+        "movimentos": [
+            {"codigo": 239, "nome": "Não-Provimento", "dataHora": "2025-03-01T12:00:00Z"}
+        ],
+    }
+    cursor.execute(
+        "INSERT INTO raw.datajud_case (tribunal, source_url, collected_at, payload_hash, payload) "
+        "VALUES ('stj', 'https://x', %s, 'h-stj-appeal', %s)",
+        (datetime(2026, 1, 1, tzinfo=timezone.utc), json.dumps(payload)),
+    )
+
+
+def insert_raw_stj_vice_presidency_case(cursor):
+    payload = {
+        "numeroProcesso": "00000030020245000000",
+        "grau": "SUP",
+        "classe": {"codigo": 11881, "nome": "Agravo em Recurso Especial"},
+        "orgaoJulgador": {"codigo": 901, "nome": "VICE-PRESIDÊNCIA"},
+        "dataAjuizamento": "2024-01-15T10:00:00Z",
+        "nivelSigilo": 0,
+        "assuntos": [{"codigo": 1127, "nome": "Contratos"}],
+        "movimentos": [
+            {"codigo": 239, "nome": "Não-Provimento", "dataHora": "2025-04-01T12:00:00Z"}
+        ],
+    }
+    cursor.execute(
+        "INSERT INTO raw.datajud_case (tribunal, source_url, collected_at, payload_hash, payload) "
+        "VALUES ('stj', 'https://x', %s, 'h-stj-vp', %s)",
+        (datetime.now(timezone.utc), json.dumps(payload)),
+    )
+
+
 def same_vector_encoder(texts):
     return [[1.0, 0.0] for _ in texts]
 
 
-def run_once(postgres_container, dw_ready, tmp_path):
+def run_once(postgres_container, dw_ready, tmp_path, extra_raw=()):
     tpu = load_tpu(FIXTURE_TPU)
     local_dsn = (
         f"postgresql://{postgres_container.username}:{postgres_container.password}"
@@ -81,6 +144,8 @@ def run_once(postgres_container, dw_ready, tmp_path):
         ensure_raw(cursor)
         cursor.execute("TRUNCATE raw.datajud_case RESTART IDENTITY CASCADE")
         insert_raw_case(cursor)
+        for insert in extra_raw:
+            insert(cursor)
         cursor.execute("TRUNCATE raw.doctrine_article RESTART IDENTITY")
         insert_raw_doctrine(cursor)
 
@@ -92,6 +157,74 @@ def run_once(postgres_container, dw_ready, tmp_path):
         connection.commit()
 
     return output_path.read_text(encoding="utf-8")
+
+
+def test_run_writes_the_manifest_beside_the_load_file(postgres_container, dw_ready, tmp_path):
+    run_once(postgres_container, dw_ready, tmp_path)
+
+    manifest = json.loads((tmp_path / "load.manifest.json").read_text(encoding="utf-8"))
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT max(extracted_at) FROM dw.fact_case_event")
+        extracted_at = cursor.fetchone()[0]
+
+    assert manifest["schema_version"] == "V016__add_strength_settings.sql"
+    assert manifest["extracted_at"] == extracted_at.isoformat()
+    assert manifest["tables"]["fact_case_event"] == 1
+    assert manifest["tables"]["dim_theme"] == 1
+    assert manifest["cases_decided_in_more_than_one_court"] == 0
+    assert manifest["unmapped_stj_judging_bodies"] == 0
+    assert "case_current_result" not in manifest["tables"]
+
+
+def test_run_loads_a_stj_case_at_the_superior_level(postgres_container, dw_ready, tmp_path):
+    content = run_once(postgres_container, dw_ready, tmp_path, extra_raw=[insert_raw_stj_case])
+
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT dc.case_number, c.court_code, dc.court_level FROM dw.dim_case dc "
+            "JOIN dw.dim_court c ON c.court_sk = dc.court_sk ORDER BY dc.case_number"
+        )
+        assert cursor.fetchall() == [
+            ("00000010020248260100", "TJSP", "First"),
+            ("00000020020245000000", "STJ", "Superior"),
+        ]
+    assert "00000020020245000000" in content
+
+
+def test_run_measures_the_cases_decided_in_more_than_one_court(
+    postgres_container, dw_ready, tmp_path
+):
+    run_once(postgres_container, dw_ready, tmp_path, extra_raw=[insert_stj_appeal_of_the_tjsp_case])
+
+    manifest = json.loads((tmp_path / "load.manifest.json").read_text(encoding="utf-8"))
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT c.court_code FROM dw.case_current_result r "
+            "JOIN dw.dim_court c ON c.court_sk = r.court_sk"
+        )
+        assert cursor.fetchall() == [("STJ",)]
+    assert manifest["cases_decided_in_more_than_one_court"] == 1
+
+
+def test_run_counts_the_stj_decisions_outside_a_panel(postgres_container, dw_ready, tmp_path):
+    run_once(
+        postgres_container, dw_ready, tmp_path,
+        extra_raw=[insert_raw_stj_case, insert_raw_stj_vice_presidency_case],
+    )
+
+    manifest = json.loads((tmp_path / "load.manifest.json").read_text(encoding="utf-8"))
+    assert manifest["unmapped_stj_judging_bodies"] == 1
+
+
+def test_lists_the_subjects_of_the_themes_below_five_judged_cases(
+    postgres_container, dw_ready, tmp_path
+):
+    run_once(postgres_container, dw_ready, tmp_path)
+
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        assert thin_subject_codes(cursor) == [1127]
+        assert themes_with_at_least(cursor, 1) == 1
+        assert themes_with_at_least(cursor, 5) == 0
 
 
 def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_path):

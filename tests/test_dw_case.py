@@ -64,6 +64,24 @@ def test_two_events_of_the_same_case_produce_a_single_row(cursor):
     assert cursor.fetchone() == (1,)
 
 
+def test_keeps_the_state_court_of_a_case_that_reached_the_stj(cursor):
+    insert_staging_row(
+        cursor, case_number="A", court_level="First", extracted_at="2024-01-01T00:00:00Z"
+    )
+    insert_staging_row(
+        cursor, tribunal="stj", case_number="A", court_level="Superior",
+        extracted_at="2024-06-01T00:00:00Z",
+    )
+
+    load(cursor)
+
+    cursor.execute(
+        "SELECT c.court_code, dc.court_level FROM dw.dim_case dc "
+        "JOIN dw.dim_court c ON c.court_sk = dc.court_sk WHERE dc.case_number = 'A'"
+    )
+    assert cursor.fetchall() == [("TJSP", "First")]
+
+
 def test_picks_the_data_from_the_most_recently_extracted_row(cursor):
     insert_staging_row(
         cursor, case_number="A", court_level="First", extracted_at="2024-01-01T00:00:00Z"

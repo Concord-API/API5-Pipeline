@@ -95,18 +95,31 @@ def environment(monkeypatch, clean_database, tmp_path):
     return output_path
 
 
-def test_harvests_and_writes_the_load_file(environment, container_runner):
+def test_harvests_and_writes_the_load_file(environment, container_runner, capsys):
     factory = SessionFactory()
 
     exit_code = main([], session_factory=factory, runner=container_runner)
 
     assert exit_code == 0
+    assert environment.with_name(environment.stem + ".manifest.json").exists()
+    assert "manifest:" in capsys.readouterr().out
     assert factory.keys == ["public-key"]
     content = environment.read_text(encoding="utf-8")
     assert content.startswith("BEGIN;")
     assert content.rstrip().endswith("COMMIT;")
     assert "COPY dw.dim_case" in content
     assert "0000001-00.2024.8.26.0100" in content
+
+
+def test_top_up_reports_the_themes_with_five_judged_cases(
+    environment, container_runner, capsys
+):
+    exit_code = main(["--top-up"], session_factory=SessionFactory(), runner=container_runner)
+
+    assert exit_code == 0
+    assert "top-up: 0 new cases for 1 subjects; themes with 5+ judged cases 0 -> 0 (+0)" in (
+        capsys.readouterr().out
+    )
 
 
 def test_skip_harvest_builds_from_the_raw_already_collected(

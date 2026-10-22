@@ -9,8 +9,15 @@ def load(path: str = DEFAULT_PATH) -> dict:
         return json.load(handle)
 
 
+APPEAL_CLASSES = {"stj": [1032, 11881, 1137, 11956]}
+
+
 def civil_class_codes(tpu: dict) -> list[int]:
     return tpu["classes_civel"]["codigos"]
+
+
+def class_codes(tpu: dict, tribunal: str) -> list[int]:
+    return APPEAL_CLASSES.get(tribunal) or civil_class_codes(tpu)
 
 
 def penal_subject_codes(tpu: dict) -> list[int]:
@@ -24,12 +31,13 @@ def area(tpu: dict, area_code: str) -> dict:
         raise KeyError(f"Area code {area_code} is not in the TPU areas") from None
 
 
-def datajud_civil_query(tpu: dict, area_code: str, decision_codes: list[int]) -> dict:
-    subjects = area(tpu, area_code)["codigos"]
+def datajud_subjects_query(
+    tpu: dict, subjects: list[int], decision_codes: list[int], class_codes: list[int] | None = None
+) -> dict:
     return {
         "bool": {
             "filter": [
-                {"terms": {"classe.codigo": civil_class_codes(tpu)}},
+                {"terms": {"classe.codigo": class_codes or civil_class_codes(tpu)}},
                 {"terms": {"assuntos.codigo": subjects}},
                 {"terms": {"movimentos.codigo": decision_codes}},
             ],
@@ -38,3 +46,9 @@ def datajud_civil_query(tpu: dict, area_code: str, decision_codes: list[int]) ->
             ],
         }
     }
+
+
+def datajud_civil_query(
+    tpu: dict, area_code: str, decision_codes: list[int], class_codes: list[int] | None = None
+) -> dict:
+    return datajud_subjects_query(tpu, area(tpu, area_code)["codigos"], decision_codes, class_codes)

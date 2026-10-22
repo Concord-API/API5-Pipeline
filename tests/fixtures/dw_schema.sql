@@ -221,7 +221,7 @@ CREATE TABLE dw.dim_case (
     case_number_formatted text,
     source_link text,
     source_link_type text,
-    CONSTRAINT dim_case_court_level_check CHECK ((court_level = ANY (ARRAY['First'::text, 'Second'::text, 'SpecialCourt'::text, 'AppealPanel'::text]))),
+    CONSTRAINT dim_case_court_level_check CHECK ((court_level = ANY (ARRAY['First'::text, 'Second'::text, 'SpecialCourt'::text, 'AppealPanel'::text, 'Superior'::text]))),
     CONSTRAINT dim_case_secrecy_level_check CHECK (((secrecy_level >= 0) AND (secrecy_level <= 5))),
     CONSTRAINT dim_case_source_link_pair_check CHECK (((source_link IS NULL) = (source_link_type IS NULL))),
     CONSTRAINT dim_case_source_link_type_check CHECK (((source_link_type IS NULL) OR (source_link_type = ANY (ARRAY['direto'::text, 'portal'::text]))))
@@ -581,10 +581,13 @@ CREATE TABLE dw.strength_config (
     weight_coverage real DEFAULT 0.20 NOT NULL,
     weight_recency real DEFAULT 0.10 NOT NULL,
     volume_saturation integer DEFAULT 300 NOT NULL,
-    coverage_courts smallint DEFAULT 3 NOT NULL,
+    coverage_courts smallint DEFAULT 5 NOT NULL,
     reference_year smallint DEFAULT (EXTRACT(year FROM now()))::smallint NOT NULL,
     methodology_version text NOT NULL,
     min_judged_for_percentage smallint DEFAULT 2 NOT NULL,
+    min_judged_for_grade smallint DEFAULT 10 NOT NULL,
+    divergence_points smallint DEFAULT 20 NOT NULL,
+    min_judged_for_divergence smallint DEFAULT 5 NOT NULL,
     CONSTRAINT strength_config_check CHECK ((abs(((((weight_agreement + weight_volume) + weight_coverage) + weight_recency) - (1.0)::double precision)) < (0.001)::double precision)),
     CONSTRAINT strength_config_id_check CHECK ((id = 1)),
     CONSTRAINT strength_config_min_judged_for_percentage_check CHECK ((min_judged_for_percentage >= 1))
@@ -604,6 +607,25 @@ CREATE TABLE dw.theme_narrative (
     generated_at date NOT NULL,
     CONSTRAINT theme_narrative_text_origin_check CHECK ((text_origin = ANY (ARRAY['template'::text, 'curated'::text])))
 );
+
+
+--
+-- Name: theme_outcome_distribution; Type: MATERIALIZED VIEW; Schema: dw; Owner: -
+--
+
+CREATE MATERIALIZED VIEW dw.theme_outcome_distribution AS
+ SELECT bts.theme_sk,
+    ccr.polarity_reference,
+    count(DISTINCT ccr.case_sk) AS judged_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'Granted'::text)) AS upheld_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'PartiallyGranted'::text)) AS partially_upheld_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'Denied'::text)) AS rejected_count
+   FROM (((dw.bridge_theme_subject bts
+     JOIN dw.bridge_case_subject bcs ON ((bcs.subject_sk = bts.subject_sk)))
+     JOIN dw.case_current_result ccr ON ((ccr.case_sk = bcs.case_sk)))
+     JOIN dw.dim_decision_outcome o ON ((o.outcome_sk = ccr.outcome_sk)))
+  GROUP BY bts.theme_sk, ccr.polarity_reference
+  WITH NO DATA;
 
 
 --
@@ -1226,6 +1248,13 @@ CREATE INDEX idx_fact_case_event_extracted_at ON dw.fact_case_event USING btree 
 --
 
 CREATE INDEX idx_fact_case_event_movement ON dw.fact_case_event USING btree (movement_sk);
+
+
+--
+-- Name: idx_theme_outcome_distribution_pk; Type: INDEX; Schema: dw; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_theme_outcome_distribution_pk ON dw.theme_outcome_distribution USING btree (theme_sk, polarity_reference);
 
 
 --

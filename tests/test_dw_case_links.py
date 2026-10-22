@@ -93,6 +93,16 @@ def test_tjmg_gets_the_fixed_portal_link(cursor):
     assert link == "https://www4.tjmg.jus.br/juridico/sf/proc_resultado.jsp"
 
 
+def test_stj_gets_the_fixed_portal_link(cursor):
+    case_sk = insert_case(cursor, "STJ", "10734406020224013400")
+
+    set_source_links(cursor)
+
+    _, link, link_type = fetch(cursor, case_sk)
+    assert link_type == "portal"
+    assert link == "https://processo.stj.jus.br/processo/pesquisa/"
+
+
 def test_tjsp_without_a_formatted_number_gets_no_link(cursor):
     case_sk = insert_case(cursor, "TJSP", "123")
 

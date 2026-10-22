@@ -55,6 +55,44 @@ def test_discards_the_whole_case_when_the_class_is_outside_the_civil_scope():
     assert flatten(1, "tjsp", "https://x", COLLECTED_AT, payload, tpu()) == []
 
 
+def test_keeps_a_stj_appeal():
+    payload = civil_payload(classe={"codigo": 1032, "nome": "Recurso Especial"})
+
+    assert flatten(1, "stj", "https://x", COLLECTED_AT, payload, tpu()) != []
+
+
+def test_discards_a_stj_case_outside_the_appeal_classes():
+    assert flatten(1, "stj", "https://x", COLLECTED_AT, civil_payload(), tpu()) == []
+
+
+def test_discards_an_appeal_class_in_a_state_court():
+    payload = civil_payload(classe={"codigo": 1032, "nome": "Recurso Especial"})
+
+    assert flatten(1, "tjsp", "https://x", COLLECTED_AT, payload, tpu()) == []
+
+
+def test_names_a_stj_body_after_the_panel_of_the_decision():
+    office = "GABINETE DA MINISTRA NANCY ANDRIGHI"
+    payload = civil_payload(
+        classe={"codigo": 1032, "nome": "Recurso Especial"},
+        orgaoJulgador={"codigo": 1, "nome": office},
+        movimentos=[{
+            "codigo": 239, "nome": "Não-Provimento", "dataHora": "2025-03-10T12:00:00Z",
+            "orgaoJulgador": {"codigo": "1", "nome": office},
+        }],
+    )
+
+    rows = flatten(1, "stj", "https://x", COLLECTED_AT, payload, tpu())
+
+    assert [row[7] for row in rows] == ["Terceira Turma"]
+
+
+def test_keeps_the_body_name_of_a_state_court():
+    rows = flatten(1, "tjsp", "https://x", COLLECTED_AT, civil_payload(), tpu())
+
+    assert {row[7] for row in rows} == {civil_payload()["orgaoJulgador"]["nome"]}
+
+
 def test_discards_a_movement_without_occurred_at():
     payload = civil_payload(movimentos=[{"codigo": 219, "nome": "Procedência"}])
 
@@ -109,6 +147,10 @@ def test_map_court_level_known_values():
 def test_map_court_level_special_court_and_appeal_panel():
     assert map_court_level("JE") == "SpecialCourt"
     assert map_court_level("TR") == "AppealPanel"
+
+
+def test_map_court_level_of_the_stj_cases_is_superior():
+    assert map_court_level("SUP") == "Superior"
 
 
 def test_map_court_level_unknown_value_is_kept():

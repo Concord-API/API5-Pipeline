@@ -1,0 +1,72 @@
+{
+  "source": "STJ, Assessoria para Assuntos Funcionais de Magistrados, Composição de 13/10/2026 (https://www.stj.jus.br/sites/portalp/Institucional/Composicao)",
+  "panels": [
+    {
+      "panel": "Primeira Turma",
+      "section": "Primeira Seção",
+      "members": [
+        {"name": "HERMAN BENJAMIN", "since": "2026-08-25"},
+        {"name": "SERGIO KUKINA", "since": "2013-02-07"},
+        {"name": "REGINA HELENA COSTA", "since": "2014-08-29"},
+        {"name": "GURGEL DE FARIA", "since": "2016-03-01"},
+        {"name": "PAULO SERGIO DOMINGUES", "since": "2022-12-07"}
+      ]
+    },
+    {
+      "panel": "Segunda Turma",
+      "section": "Primeira Seção",
+      "members": [
+        {"name": "FRANCISCO FALCAO", "since": "2016-09-02"},
+        {"name": "MARIA THEREZA ASSIS MOURA", "since": "2024-08-23"},
+        {"name": "MARCO AURELIO BELLIZZE", "since": "2024-11-22"},
+        {"name": "TEODORO SILVA SANTOS", "since": "2024-03-15"},
+        {"name": "AFRANIO VILELA", "since": "2023-11-23"}
+      ]
+    },
+    {
+      "panel": "Terceira Turma",
+      "section": "Segunda Seção",
+      "members": [
+        {"name": "NANCY ANDRIGHI", "since": "2016-08-25"},
+        {"name": "HUMBERTO MARTINS", "since": "2023-06-01"},
+        {"name": "VILLAS BOAS CUEVA", "since": "2011-06-14"},
+        {"name": "MOURA RIBEIRO", "since": "2014-08-29"},
+        {"name": "DANIELA TEIXEIRA", "since": "2025-03-01"}
+      ]
+    },
+    {
+      "panel": "Quarta Turma",
+      "section": "Segunda Seção",
+      "members": [
+        {"name": "JOAO OTAVIO NORONHA", "since": "2022-09-29"},
+        {"name": "RAUL ARAUJO", "since": "2018-09-26"},
+        {"name": "MARIA ISABEL GALLOTTI", "since": "2010-08-11"},
+        {"name": "ANTONIO CARLOS FERREIRA", "since": "2011-06-11"},
+        {"name": "LUIS CARLOS BALBINO GAMBOGI", "since": "2026-02-23"},
+        {"name": "MARCO BUZZI", "since": "2011-09-05", "until": "2026-02-23"}
+      ]
+    },
+    {
+      "panel": "Quinta Turma",
+      "section": "Terceira Seção",
+      "members": [
+        {"name": "REYNALDO SOARES FONSECA", "since": "2015-05-27"},
+        {"name": "RIBEIRO DANTAS", "since": "2015-10-01"},
+        {"name": "JOEL ILAN PACIORNIK", "since": "2016-04-07"},
+        {"name": "MESSOD AZULAY NETO", "since": "2022-12-07"},
+        {"name": "MARIA MARLUCE CALDAS", "since": "2025-09-05"}
+      ]
+    },
+    {
+      "panel": "Sexta Turma",
+      "section": "Terceira Seção",
+      "members": [
+        {"name": "OG FERNANDES", "since": "2024-08-23"},
+        {"name": "SEBASTIAO REIS JUNIOR", "since": "2011-06-14"},
+        {"name": "ROGERIO SCHIETTI CRUZ", "since": "2013-08-29"},
+        {"name": "CARLOS PIRES BRANDAO", "since": "2025-09-05"},
+        {"name": "NILSONI FREITAS CUSTODIO", "since": "2026-05-18"}
+      ]
+    }
+  ]
+}

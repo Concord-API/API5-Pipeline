@@ -73,3 +73,138 @@ jobs:
           args: >
             -Dsonar.qualitygate.wait=${{ env.SONAR_WAIT_GATE }}
             -Dsonar.qualitygate.timeout=300
+
+  compatibility:
+    name: Pipeline compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: ratio
+      PGPASSWORD: ratio
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: ratio
+          POSTGRES_PASSWORD: ratio
+          POSTGRES_INITDB_ARGS: --locale-provider=icu --icu-locale=pt-BR --encoding=UTF8 --locale=C.utf8
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ratio"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Pick the backend branch
+        id: backend
+        env:
+          CANDIDATES: ${{ github.head_ref || github.ref_name }} ${{ github.base_ref }}
+        run: |
+          for branch in $CANDIDATES; do
+            if git ls-remote --exit-code --heads https://github.com/Concord-API/API5-Backend.git "$branch" >/dev/null; then
+              echo "ref=$branch" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "ref=main" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: Concord-API/API5-Backend
+          ref: ${{ steps.backend.outputs.ref }}
+          path: backend
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: backend/global.json
+          cache: true
+          cache-dependency-path: backend/Ratio/**/packages.lock.json
+
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create the load and destination databases
+        run: |
+          for database in carga destino; do
+            psql -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE $database"
+            psql -d "$database" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+          done
+
+      - name: Publish the API
+        run: dotnet publish backend/Ratio/Ratio.Api/Ratio.Api.csproj --configuration Release -p:RestoreLockedMode=true --output "$RUNNER_TEMP/api"
+
+      - name: Let the API migrate both databases
+        working-directory: ${{ runner.temp }}/api
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+        run: |
+          start_api() {
+            ConnectionStrings__Ratio="Host=localhost;Port=5432;Database=$1;Username=ratio;Password=ratio" \
+            Kestrel__Endpoints__Http__Url="http://127.0.0.1:$2" \
+            nohup dotnet Ratio.Api.dll > "$RUNNER_TEMP/api-$1.out" 2>&1 &
+            echo $!
+          }
+          wait_for() {
+            for _ in $(seq 1 60); do
+              curl -fsS "http://127.0.0.1:$1/health" >/dev/null 2>&1 && return 0
+              sleep 2
+            done
+            echo "::error::The API on port $1 did not answer /health"
+            return 1
+          }
+          carga=$(start_api carga 5001)
+          wait_for 5001
+          kill "$carga"
+          start_api destino 5000 >/dev/null
+          wait_for 5000
+
+      - name: Build the sample with the pipeline
+        env:
+          DATABASE_URL: postgresql://ratio:ratio@localhost:5432/carga
+        run: python -m pipeline.sample
+
+      - name: Load the sample into a database migrated by the API
+        run: |
+          status=$(curl -s -o ready.json -w '%{http_code}' http://127.0.0.1:5000/health/ready)
+          test "$status" = 503
+          psql -d destino -v ON_ERROR_STOP=1 -q -f ratio-sample.sql > /dev/null
+
+      - name: Check that the API serves the sample
+        run: |
+          curl -fsS http://127.0.0.1:5000/health/ready | tee ready.json
+          test "$(jq -r .status ready.json)" = "Pronto"
+          curl -fsS http://127.0.0.1:5000/api/themes | tee themes.json
+          test "$(jq '.themes | length' themes.json)" -gt 0
+
+      - name: Upload the sample
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ratio-sample-${{ github.sha }}
+          path: |
+            ratio-sample.sql
+            ratio-sample.manifest.json
+          retention-days: 14
+
+      - name: Upload the API logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: compatibility-api-logs-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/api-carga.out
+            ${{ runner.temp }}/api-destino.out
+            ${{ runner.temp }}/api/logs/
+          retention-days: 14

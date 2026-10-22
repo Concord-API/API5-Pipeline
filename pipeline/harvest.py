@@ -2,9 +2,9 @@ import requests
 
 from pipeline.datajud import collect as datajud_collect
 from pipeline.dw_reference import verified_movement_codes
-from pipeline.tpu import datajud_civil_query
+from pipeline.tpu import class_codes, datajud_civil_query
 
-TRIBUNALS = ("tjsp", "tjrj", "tjmg")
+TRIBUNALS = ("tjsp", "tjrj", "tjmg", "stj")
 
 CORE_QUOTA = 700
 SUPPORT_QUOTA = 250
@@ -38,7 +38,9 @@ def harvest(
     total = 0
     for tribunal in tribunals:
         for area_code, quota in area_quotas.items():
-            query = datajud_civil_query(tpu, area_code, verified_movement_codes())
+            query = datajud_civil_query(
+                tpu, area_code, verified_movement_codes(), class_codes(tpu, tribunal)
+            )
             total += collect(session, cursor, datajud_url(tribunal), tribunal, query, quota)
             cursor.connection.commit()
     return total

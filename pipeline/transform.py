@@ -1,7 +1,8 @@
 import json
 from datetime import datetime, timezone
 
-from pipeline.tpu import civil_class_codes, penal_subject_codes
+from pipeline.stj_panels import panel_for
+from pipeline.tpu import class_codes, penal_subject_codes
 
 COURT_LEVEL_MAP = {
     "G1": "First",
@@ -9,6 +10,7 @@ COURT_LEVEL_MAP = {
     "JE": "SpecialCourt",
     "TR": "AppealPanel",
     "GRAU_UNICO": "Superior",
+    "SUP": "Superior",
     "GR": "Second",
 }
 
@@ -44,7 +46,7 @@ def flatten(raw_id, tribunal, source_url, collected_at, payload, tpu, movement_n
 
     if subject_codes & set(penal_subject_codes(tpu)):
         return []
-    if classe.get("codigo") is not None and classe.get("codigo") not in civil_class_codes(tpu):
+    if classe.get("codigo") is not None and classe.get("codigo") not in class_codes(tpu, tribunal):
         return []
 
     court_level = map_court_level(payload.get("grau"))
@@ -62,10 +64,14 @@ def flatten(raw_id, tribunal, source_url, collected_at, payload, tpu, movement_n
         if not name:
             continue
         orgao_code = orgao.get("codigo")
+        body_name = orgao.get("nome")
+        if tribunal == "stj":
+            decided_by = (mov.get("orgaoJulgador") or {}).get("nome") or body_name
+            body_name = panel_for(decided_by, occurred_at) or decided_by
         rows.append((
             raw_id, tribunal, case_number, court_level,
             classe.get("codigo"), classe.get("nome"),
-            str(orgao_code) if orgao_code is not None else None, orgao.get("nome"),
+            str(orgao_code) if orgao_code is not None else None, body_name,
             filed_at, secrecy, json.dumps(subjects),
             code, name, occurred_at,
             "datajud", source_url, collected_at,

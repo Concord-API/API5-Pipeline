@@ -2,6 +2,7 @@ COURTS = [
     ("TJSP", "Tribunal de Justiça de São Paulo", "SP"),
     ("TJRJ", "Tribunal de Justiça do Rio de Janeiro", "RJ"),
     ("TJMG", "Tribunal de Justiça de Minas Gerais", "MG"),
+    ("STJ", "Superior Tribunal de Justiça", "DF"),
 ]
 
 OUTCOMES = [

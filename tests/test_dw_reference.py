@@ -46,12 +46,14 @@ def fetch_scalars(cursor, sql):
     return [r[0] for r in cursor.fetchall()]
 
 
-def test_seed_courts_creates_the_three_courts(cursor):
+def test_seed_courts_creates_the_state_courts_and_the_stj(cursor):
     seed_courts(cursor)
 
     codes = fetch_scalars(cursor, "SELECT court_code FROM dw.dim_court ORDER BY court_code")
+    ufs = fetch_scalars(cursor, "SELECT state_uf FROM dw.dim_court WHERE court_code = 'STJ'")
 
-    assert codes == ["TJMG", "TJRJ", "TJSP"]
+    assert codes == ["STJ", "TJMG", "TJRJ", "TJSP"]
+    assert ufs == ["DF"]
 
 
 def test_seed_courts_twice_does_not_duplicate(cursor):
@@ -60,7 +62,7 @@ def test_seed_courts_twice_does_not_duplicate(cursor):
 
     codes = fetch_scalars(cursor, "SELECT court_code FROM dw.dim_court")
 
-    assert len(codes) == 3
+    assert len(codes) == 4
 
 
 def test_seed_outcomes_creates_the_five_outcomes(cursor):

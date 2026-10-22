@@ -7,3 +7,5 @@ __pycache__/
 .coverage
 coverage.xml
 test-results/
+ratio-load*
+ratio-sample*

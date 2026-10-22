@@ -62,3 +62,10 @@ def set_source_links(cursor):
         FROM dw.dim_court ct
         WHERE ct.court_sk = c.court_sk AND ct.court_code = 'TJMG'
     """)
+    cursor.execute("""
+        UPDATE dw.dim_case c
+        SET source_link = 'https://processo.stj.jus.br/processo/pesquisa/',
+            source_link_type = 'portal'
+        FROM dw.dim_court ct
+        WHERE ct.court_sk = c.court_sk AND ct.court_code = 'STJ'
+    """)
