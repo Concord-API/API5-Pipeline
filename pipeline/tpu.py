@@ -9,8 +9,15 @@ def load(path: str = DEFAULT_PATH) -> dict:
         return json.load(handle)
 
 
+APPEAL_CLASSES = {"stj": [1032, 11881, 1137, 11956]}
+
+
 def civil_class_codes(tpu: dict) -> list[int]:
     return tpu["classes_civel"]["codigos"]
+
+
+def class_codes(tpu: dict, tribunal: str) -> list[int]:
+    return APPEAL_CLASSES.get(tribunal) or civil_class_codes(tpu)
 
 
 def penal_subject_codes(tpu: dict) -> list[int]:

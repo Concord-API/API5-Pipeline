@@ -2,7 +2,14 @@ import os
 
 import pytest
 
-from pipeline.tpu import area, civil_class_codes, datajud_civil_query, load, penal_subject_codes
+from pipeline.tpu import (
+    area,
+    civil_class_codes,
+    class_codes,
+    datajud_civil_query,
+    load,
+    penal_subject_codes,
+)
 
 FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "tpu_sample.json")
 
@@ -56,3 +63,8 @@ def test_datajud_civil_query_takes_the_classes_of_another_court(tpu):
 
     assert {"terms": {"classe.codigo": [1032, 11881]}} in query["bool"]["filter"]
     assert {"terms": {"assuntos.codigo": [1127, 1128]}} in query["bool"]["filter"]
+
+
+def test_class_codes_are_the_appeals_in_the_stj_and_the_civil_classes_elsewhere(tpu):
+    assert class_codes(tpu, "stj") == [1032, 11881, 1137, 11956]
+    assert class_codes(tpu, "tjsp") == [7, 436]
