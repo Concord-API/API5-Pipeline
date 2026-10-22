@@ -11,6 +11,7 @@ from pipeline.run import run
 
 SAMPLE_PATH = Path(__file__).resolve().parent / "data" / "raw_sample.json"
 COLLECTED_AT = datetime(2026, 10, 1, 12, 0, tzinfo=timezone.utc)
+SAMPLE_FILE = "ratio-sample.sql"
 
 
 class SampleError(Exception):
@@ -45,10 +46,9 @@ def build(cursor, dsn, output_path, runner=None):
     return run(cursor, dsn, tpu.load(), theme_build.load_groups(), output_path, runner=runner)
 
 
-def main(argv=None, runner=None) -> int:
-    argv = sys.argv[1:] if argv is None else argv
+def main(runner=None) -> int:
     config.load_env()
-    output_path = argv[0] if argv else "ratio-sample.sql"
+    output_path = SAMPLE_FILE
     try:
         dsn = config.database_url()
         connection = psycopg2.connect(dsn)
