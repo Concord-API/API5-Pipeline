@@ -24,12 +24,14 @@ def area(tpu: dict, area_code: str) -> dict:
         raise KeyError(f"Area code {area_code} is not in the TPU areas") from None
 
 
-def datajud_civil_query(tpu: dict, area_code: str, decision_codes: list[int]) -> dict:
+def datajud_civil_query(
+    tpu: dict, area_code: str, decision_codes: list[int], class_codes: list[int] | None = None
+) -> dict:
     subjects = area(tpu, area_code)["codigos"]
     return {
         "bool": {
             "filter": [
-                {"terms": {"classe.codigo": civil_class_codes(tpu)}},
+                {"terms": {"classe.codigo": class_codes or civil_class_codes(tpu)}},
                 {"terms": {"assuntos.codigo": subjects}},
                 {"terms": {"movimentos.codigo": decision_codes}},
             ],

@@ -49,3 +49,10 @@ def test_datajud_civil_query_requires_one_of_the_decision_movements(tpu):
     query = datajud_civil_query(tpu, "899", decision_codes=[219, 220])
 
     assert {"terms": {"movimentos.codigo": [219, 220]}} in query["bool"]["filter"]
+
+
+def test_datajud_civil_query_takes_the_classes_of_another_court(tpu):
+    query = datajud_civil_query(tpu, "899", decision_codes=[219], class_codes=[1032, 11881])
+
+    assert {"terms": {"classe.codigo": [1032, 11881]}} in query["bool"]["filter"]
+    assert {"terms": {"assuntos.codigo": [1127, 1128]}} in query["bool"]["filter"]

@@ -101,14 +101,16 @@ def test_datajud_url_points_to_the_stj_index():
     assert datajud_url("stj") == "https://api-publica.datajud.cnj.jus.br/api_publica_stj/_search"
 
 
-def test_queries_the_stj_with_the_same_civil_cut_and_judgment_filter_as_the_state_courts():
+def test_queries_the_stj_appeals_with_the_state_court_subject_and_judgment_filters():
     tpu = load(FIXTURE_TPU)
     collect = FakeCollect()
 
     harvest(None, FakeCursor(), tpu, area_quotas={"899": 700}, collect=collect)
 
-    queries = {call["tribunal"]: call["query"] for call in collect.calls}
-    stj = queries["stj"]["bool"]
-    assert queries["stj"] == queries["tjsp"]
+    queries = {call["tribunal"]: call["query"]["bool"] for call in collect.calls}
+    stj, tjsp = queries["stj"], queries["tjsp"]
+    assert stj["filter"][0] == {"terms": {"classe.codigo": [1032, 11881, 1137, 11956]}}
+    assert tjsp["filter"][0] == {"terms": {"classe.codigo": [7, 436]}}
+    assert stj["filter"][1:] == tjsp["filter"][1:]
     assert {"terms": {"movimentos.codigo": [219, 220, 221, 237, 238, 239]}} in stj["filter"]
-    assert {"terms": {"assuntos.codigo": [3568, 3593]}} in stj["must_not"]
+    assert stj["must_not"] == tjsp["must_not"] == [{"terms": {"assuntos.codigo": [3568, 3593]}}]
