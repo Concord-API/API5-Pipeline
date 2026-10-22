@@ -66,6 +66,30 @@ def insert_raw_stj_case(cursor):
     )
 
 
+def insert_stj_appeal_of_the_tjsp_case(cursor):
+    cursor.execute(
+        "INSERT INTO dw.dim_court (court_code, court_name, state_uf) "
+        "VALUES ('STJ', 'Superior Tribunal de Justiça', 'DF') ON CONFLICT (court_code) DO NOTHING"
+    )
+    payload = {
+        "numeroProcesso": "00000010020248260100",
+        "grau": "SUP",
+        "classe": {"codigo": 1032, "nome": "Recurso Especial"},
+        "orgaoJulgador": {"codigo": 900, "nome": "Terceira Turma"},
+        "dataAjuizamento": "2024-01-15T10:00:00Z",
+        "nivelSigilo": 0,
+        "assuntos": [{"codigo": 1127, "nome": "Contratos"}],
+        "movimentos": [
+            {"codigo": 239, "nome": "Não-Provimento", "dataHora": "2025-03-01T12:00:00Z"}
+        ],
+    }
+    cursor.execute(
+        "INSERT INTO raw.datajud_case (tribunal, source_url, collected_at, payload_hash, payload) "
+        "VALUES ('stj', 'https://x', %s, 'h-stj-appeal', %s)",
+        (datetime(2026, 1, 1, tzinfo=timezone.utc), json.dumps(payload)),
+    )
+
+
 def same_vector_encoder(texts):
     return [[1.0, 0.0] for _ in texts]
 
@@ -126,6 +150,7 @@ def test_run_writes_the_manifest_beside_the_load_file(postgres_container, dw_rea
     assert manifest["extracted_at"] == extracted_at.isoformat()
     assert manifest["tables"]["fact_case_event"] == 1
     assert manifest["tables"]["dim_theme"] == 1
+    assert manifest["cases_decided_in_more_than_one_court"] == 0
     assert "case_current_result" not in manifest["tables"]
 
 
@@ -138,6 +163,21 @@ def test_run_keeps_a_stj_case_out_of_the_dw_until_the_stj_is_seeded(
         cursor.execute("SELECT case_number FROM dw.dim_case")
         assert cursor.fetchall() == [("00000010020248260100",)]
     assert "00000020020245000000" not in content
+
+
+def test_run_measures_the_cases_decided_in_more_than_one_court(
+    postgres_container, dw_ready, tmp_path
+):
+    run_once(postgres_container, dw_ready, tmp_path, extra_raw=[insert_stj_appeal_of_the_tjsp_case])
+
+    manifest = json.loads((tmp_path / "load.manifest.json").read_text(encoding="utf-8"))
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT c.court_code FROM dw.case_current_result r "
+            "JOIN dw.dim_court c ON c.court_sk = r.court_sk"
+        )
+        assert cursor.fetchall() == [("STJ",)]
+    assert manifest["cases_decided_in_more_than_one_court"] == 1
 
 
 def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_path):
