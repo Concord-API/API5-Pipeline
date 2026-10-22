@@ -49,10 +49,15 @@ jobs:
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_ENABLED: ${{ secrets.SONAR_TOKEN != '' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') }}
-      SONAR_WAIT_GATE: ${{ github.event_name == 'pull_request' }}
+      SONAR_REQUIRED: ${{ github.base_ref == 'main' || github.ref == 'refs/heads/main' }}
     steps:
+      - name: Fail when SonarQube Cloud is not configured on the way to main
+        if: ${{ env.SONAR_TOKEN == '' && env.SONAR_REQUIRED == 'true' }}
+        run: |
+          echo "::error::SONAR_TOKEN is not available and the quality gate is required on the way to main"
+          exit 1
       - name: Skip when SonarQube Cloud is not configured
-        if: ${{ env.SONAR_TOKEN == '' }}
+        if: ${{ env.SONAR_TOKEN == '' && env.SONAR_REQUIRED != 'true' }}
         run: echo "::warning::SONAR_TOKEN is not available, the quality analysis was skipped"
       - name: Skip branches that the SonarQube Cloud plan does not analyze
         if: ${{ env.SONAR_TOKEN != '' && env.SONAR_ENABLED != 'true' }}
@@ -71,7 +76,7 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         with:
           args: >
-            -Dsonar.qualitygate.wait=${{ env.SONAR_WAIT_GATE }}
+            -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
 
   compatibility:
