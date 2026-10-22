@@ -55,6 +55,22 @@ def test_discards_the_whole_case_when_the_class_is_outside_the_civil_scope():
     assert flatten(1, "tjsp", "https://x", COLLECTED_AT, payload, tpu()) == []
 
 
+def test_keeps_a_stj_appeal():
+    payload = civil_payload(classe={"codigo": 1032, "nome": "Recurso Especial"})
+
+    assert flatten(1, "stj", "https://x", COLLECTED_AT, payload, tpu()) != []
+
+
+def test_discards_a_stj_case_outside_the_appeal_classes():
+    assert flatten(1, "stj", "https://x", COLLECTED_AT, civil_payload(), tpu()) == []
+
+
+def test_discards_an_appeal_class_in_a_state_court():
+    payload = civil_payload(classe={"codigo": 1032, "nome": "Recurso Especial"})
+
+    assert flatten(1, "tjsp", "https://x", COLLECTED_AT, payload, tpu()) == []
+
+
 def test_discards_a_movement_without_occurred_at():
     payload = civil_payload(movimentos=[{"codigo": 219, "nome": "Procedência"}])
 
