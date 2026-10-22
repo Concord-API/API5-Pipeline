@@ -51,6 +51,18 @@ SELECT count(*) FROM (
 """
 
 
+UNMAPPED_STJ_JUDGING_BODIES = """
+SELECT count(*)
+FROM dw.fact_case_event f
+JOIN dw.dim_court c ON c.court_sk = f.court_sk
+JOIN dw.dim_movement m ON m.movement_sk = f.movement_sk
+JOIN dw.dim_decision_outcome o ON o.outcome_sk = m.outcome_sk
+LEFT JOIN dw.dim_judging_body jb ON jb.judging_body_sk = f.judging_body_sk
+WHERE c.court_code = 'STJ' AND o.counts_in_metric AND m.code_verified
+  AND coalesce(jb.body_name, '') !~ '(Turma|Seção|Corte Especial)$'
+"""
+
+
 def manifest(cursor, version, tables):
     counts = {}
     for table in tables:
@@ -60,10 +72,13 @@ def manifest(cursor, version, tables):
     extracted_at = cursor.fetchone()[0]
     cursor.execute(CASES_DECIDED_IN_MORE_THAN_ONE_COURT)
     in_more_than_one_court = cursor.fetchone()[0]
+    cursor.execute(UNMAPPED_STJ_JUDGING_BODIES)
+    unmapped_stj_bodies = cursor.fetchone()[0]
     return {
         "schema_version": version,
         "extracted_at": extracted_at.isoformat() if extracted_at else None,
         "cases_decided_in_more_than_one_court": in_more_than_one_court,
+        "unmapped_stj_judging_bodies": unmapped_stj_bodies,
         "tables": counts,
     }
 
