@@ -82,20 +82,21 @@ def test_build_refuses_a_database_that_already_has_collected_cases(empty_databas
 def test_main_builds_the_sample_from_the_settings(
     empty_database, container_runner, tmp_path, monkeypatch, capsys
 ):
-    output_path = tmp_path / "ratio-sample.sql"
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("DATABASE_URL", empty_database)
 
-    exit_code = main([str(output_path)], runner=container_runner)
+    exit_code = main(runner=container_runner)
 
     assert exit_code == 0
-    assert output_path.exists()
-    assert f"sample: {output_path}" in capsys.readouterr().out
+    assert (tmp_path / "ratio-sample.sql").exists()
+    assert (tmp_path / "ratio-sample.manifest.json").exists()
+    assert "sample: ratio-sample.sql" in capsys.readouterr().out
 
 
 def test_main_fails_clearly_without_the_database_url(monkeypatch, capsys):
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
-    exit_code = main(["ratio-sample.sql"])
+    exit_code = main()
 
     assert exit_code == 1
     assert "DATABASE_URL" in capsys.readouterr().err
@@ -110,7 +111,7 @@ def test_main_refuses_a_database_with_collected_cases(empty_database, monkeypatc
         )
     monkeypatch.setenv("DATABASE_URL", empty_database)
 
-    exit_code = main(["ratio-sample.sql"])
+    exit_code = main()
 
     assert exit_code == 1
     assert "banco vazio" in capsys.readouterr().err
