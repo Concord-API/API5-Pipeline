@@ -90,6 +90,26 @@ def insert_stj_appeal_of_the_tjsp_case(cursor):
     )
 
 
+def insert_raw_stj_vice_presidency_case(cursor):
+    payload = {
+        "numeroProcesso": "00000030020245000000",
+        "grau": "SUP",
+        "classe": {"codigo": 11881, "nome": "Agravo em Recurso Especial"},
+        "orgaoJulgador": {"codigo": 901, "nome": "VICE-PRESIDÊNCIA"},
+        "dataAjuizamento": "2024-01-15T10:00:00Z",
+        "nivelSigilo": 0,
+        "assuntos": [{"codigo": 1127, "nome": "Contratos"}],
+        "movimentos": [
+            {"codigo": 239, "nome": "Não-Provimento", "dataHora": "2025-04-01T12:00:00Z"}
+        ],
+    }
+    cursor.execute(
+        "INSERT INTO raw.datajud_case (tribunal, source_url, collected_at, payload_hash, payload) "
+        "VALUES ('stj', 'https://x', %s, 'h-stj-vp', %s)",
+        (datetime.now(timezone.utc), json.dumps(payload)),
+    )
+
+
 def same_vector_encoder(texts):
     return [[1.0, 0.0] for _ in texts]
 
@@ -151,6 +171,7 @@ def test_run_writes_the_manifest_beside_the_load_file(postgres_container, dw_rea
     assert manifest["tables"]["fact_case_event"] == 1
     assert manifest["tables"]["dim_theme"] == 1
     assert manifest["cases_decided_in_more_than_one_court"] == 0
+    assert manifest["unmapped_stj_judging_bodies"] == 0
     assert "case_current_result" not in manifest["tables"]
 
 
@@ -182,6 +203,16 @@ def test_run_measures_the_cases_decided_in_more_than_one_court(
         )
         assert cursor.fetchall() == [("STJ",)]
     assert manifest["cases_decided_in_more_than_one_court"] == 1
+
+
+def test_run_counts_the_stj_decisions_outside_a_panel(postgres_container, dw_ready, tmp_path):
+    run_once(
+        postgres_container, dw_ready, tmp_path,
+        extra_raw=[insert_raw_stj_case, insert_raw_stj_vice_presidency_case],
+    )
+
+    manifest = json.loads((tmp_path / "load.manifest.json").read_text(encoding="utf-8"))
+    assert manifest["unmapped_stj_judging_bodies"] == 1
 
 
 def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_path):

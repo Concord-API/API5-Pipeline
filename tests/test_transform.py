@@ -71,6 +71,28 @@ def test_discards_an_appeal_class_in_a_state_court():
     assert flatten(1, "tjsp", "https://x", COLLECTED_AT, payload, tpu()) == []
 
 
+def test_names_a_stj_body_after_the_panel_of_the_decision():
+    office = "GABINETE DA MINISTRA NANCY ANDRIGHI"
+    payload = civil_payload(
+        classe={"codigo": 1032, "nome": "Recurso Especial"},
+        orgaoJulgador={"codigo": 1, "nome": office},
+        movimentos=[{
+            "codigo": 239, "nome": "Não-Provimento", "dataHora": "2025-03-10T12:00:00Z",
+            "orgaoJulgador": {"codigo": "1", "nome": office},
+        }],
+    )
+
+    rows = flatten(1, "stj", "https://x", COLLECTED_AT, payload, tpu())
+
+    assert [row[7] for row in rows] == ["Terceira Turma"]
+
+
+def test_keeps_the_body_name_of_a_state_court():
+    rows = flatten(1, "tjsp", "https://x", COLLECTED_AT, civil_payload(), tpu())
+
+    assert {row[7] for row in rows} == {civil_payload()["orgaoJulgador"]["nome"]}
+
+
 def test_discards_a_movement_without_occurred_at():
     payload = civil_payload(movimentos=[{"codigo": 219, "nome": "Procedência"}])
 
