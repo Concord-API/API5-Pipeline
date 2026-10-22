@@ -9,6 +9,7 @@ COURT_LEVEL_MAP = {
     "JE": "SpecialCourt",
     "TR": "AppealPanel",
     "GRAU_UNICO": "Superior",
+    "SUP": "Superior",
     "GR": "Second",
 }
 
