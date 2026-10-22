@@ -38,6 +38,19 @@ def manifest_path(output_path):
     return path.with_name(f"{path.stem}.manifest.json")
 
 
+CASES_DECIDED_IN_MORE_THAN_ONE_COURT = """
+SELECT count(*) FROM (
+    SELECT f.case_sk
+    FROM dw.fact_case_event f
+    JOIN dw.dim_movement m ON m.movement_sk = f.movement_sk
+    JOIN dw.dim_decision_outcome o ON o.outcome_sk = m.outcome_sk
+    WHERE o.counts_in_metric AND m.code_verified
+    GROUP BY f.case_sk
+    HAVING count(DISTINCT f.court_sk) > 1
+) cases
+"""
+
+
 def manifest(cursor, version, tables):
     counts = {}
     for table in tables:
@@ -45,9 +58,12 @@ def manifest(cursor, version, tables):
         counts[table] = cursor.fetchone()[0]
     cursor.execute("SELECT max(extracted_at) FROM dw.fact_case_event")
     extracted_at = cursor.fetchone()[0]
+    cursor.execute(CASES_DECIDED_IN_MORE_THAN_ONE_COURT)
+    in_more_than_one_court = cursor.fetchone()[0]
     return {
         "schema_version": version,
         "extracted_at": extracted_at.isoformat() if extracted_at else None,
+        "cases_decided_in_more_than_one_court": in_more_than_one_court,
         "tables": counts,
     }
 
