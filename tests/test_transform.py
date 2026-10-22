@@ -127,5 +127,9 @@ def test_map_court_level_special_court_and_appeal_panel():
     assert map_court_level("TR") == "AppealPanel"
 
 
+def test_map_court_level_of_the_stj_cases_is_superior():
+    assert map_court_level("SUP") == "Superior"
+
+
 def test_map_court_level_unknown_value_is_kept():
     assert map_court_level("G3") == "G3"
