@@ -51,3 +51,16 @@ def test_leaves_unmapped_a_body_that_is_not_a_panel(body):
 
 def test_the_composition_names_its_official_source():
     assert "13/10/2026" in PANELS["source"]
+
+
+def test_reads_a_minister_office_with_a_double_encoded_accent():
+    garbled = "GABINETE DO MINISTRO RAUL ARAÚJO FILHO".encode("utf-8").decode("latin-1")
+
+    assert panel_for(garbled, on(2026, 3, 2), PANELS) == "Quarta Turma"
+
+
+def test_maps_a_minister_who_left_the_panel_only_while_he_sat_on_it():
+    office = "GABINETE DO MINISTRO MARCO BUZZI"
+
+    assert panel_for(office, on(2025, 6, 2), PANELS) == "Quarta Turma"
+    assert panel_for(office, on(2026, 3, 2), PANELS) is None
