@@ -26,7 +26,7 @@ def test_seeds_the_version_the_year_and_the_table_defaults(cursor):
 
     assert rows(cursor) == [
         ("1.0", 2026, pytest.approx(0.45), pytest.approx(0.25), pytest.approx(0.20),
-         pytest.approx(0.10), 300, 3, 2)
+         pytest.approx(0.10), 300, 5, 2)
     ]
 
 
