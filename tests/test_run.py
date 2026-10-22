@@ -48,11 +48,29 @@ def insert_raw_doctrine(cursor):
     )
 
 
+def insert_raw_stj_case(cursor):
+    payload = {
+        "numeroProcesso": "00000020020245000000",
+        "grau": "SUP",
+        "classe": {"codigo": 7, "nome": "Procedimento Comum Cível"},
+        "orgaoJulgador": {"codigo": 900, "nome": "Terceira Turma"},
+        "dataAjuizamento": "2024-01-15T10:00:00Z",
+        "nivelSigilo": 0,
+        "assuntos": [{"codigo": 1127, "nome": "Contratos"}],
+        "movimentos": [{"codigo": 237, "nome": "Provimento", "dataHora": "2024-08-01T12:00:00Z"}],
+    }
+    cursor.execute(
+        "INSERT INTO raw.datajud_case (tribunal, source_url, collected_at, payload_hash, payload) "
+        "VALUES ('stj', 'https://x', %s, 'h-stj', %s)",
+        (datetime.now(timezone.utc), json.dumps(payload)),
+    )
+
+
 def same_vector_encoder(texts):
     return [[1.0, 0.0] for _ in texts]
 
 
-def run_once(postgres_container, dw_ready, tmp_path):
+def run_once(postgres_container, dw_ready, tmp_path, extra_raw=()):
     tpu = load_tpu(FIXTURE_TPU)
     local_dsn = (
         f"postgresql://{postgres_container.username}:{postgres_container.password}"
@@ -81,6 +99,8 @@ def run_once(postgres_container, dw_ready, tmp_path):
         ensure_raw(cursor)
         cursor.execute("TRUNCATE raw.datajud_case RESTART IDENTITY CASCADE")
         insert_raw_case(cursor)
+        for insert in extra_raw:
+            insert(cursor)
         cursor.execute("TRUNCATE raw.doctrine_article RESTART IDENTITY")
         insert_raw_doctrine(cursor)
 
@@ -107,6 +127,17 @@ def test_run_writes_the_manifest_beside_the_load_file(postgres_container, dw_rea
     assert manifest["tables"]["fact_case_event"] == 1
     assert manifest["tables"]["dim_theme"] == 1
     assert "case_current_result" not in manifest["tables"]
+
+
+def test_run_keeps_a_stj_case_out_of_the_dw_until_the_stj_is_seeded(
+    postgres_container, dw_ready, tmp_path
+):
+    content = run_once(postgres_container, dw_ready, tmp_path, extra_raw=[insert_raw_stj_case])
+
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT case_number FROM dw.dim_case")
+        assert cursor.fetchall() == [("00000010020248260100",)]
+    assert "00000020020245000000" not in content
 
 
 def test_run_produces_a_complete_load_file(postgres_container, dw_ready, tmp_path):
