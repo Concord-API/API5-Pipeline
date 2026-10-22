@@ -174,7 +174,7 @@ jobs:
       - name: Build the sample with the pipeline
         env:
           DATABASE_URL: postgresql://ratio:ratio@localhost:5432/carga
-        run: python -m pipeline.sample ratio-sample.sql
+        run: python -m pipeline.sample
 
       - name: Load the sample into a database migrated by the API
         run: |
