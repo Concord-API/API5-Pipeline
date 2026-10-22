@@ -55,9 +55,10 @@ def test_build_runs_the_pipeline_on_the_fixed_sample(empty_database, container_r
     manifest = json.loads((tmp_path / "ratio-sample.manifest.json").read_text(encoding="utf-8"))
     assert content.startswith("BEGIN;")
     assert "00001010020248260100" in content
-    assert manifest["tables"]["fact_case_event"] == 12
-    assert manifest["tables"]["dim_court"] == 3
+    assert manifest["tables"]["fact_case_event"] == 14
+    assert manifest["tables"]["dim_court"] == 4
     assert manifest["tables"]["dim_theme"] == 3
+    assert manifest["cases_decided_in_more_than_one_court"] == 2
     assert manifest["extracted_at"] is not None
 
 

@@ -358,5 +358,65 @@
         }
       ]
     }
+  },
+  {
+    "tribunal": "stj",
+    "payload": {
+      "numeroProcesso": "00001010020248260100",
+      "grau": "SUP",
+      "classe": {
+        "codigo": 1032,
+        "nome": "Recurso Especial"
+      },
+      "orgaoJulgador": {
+        "codigo": 9003,
+        "nome": "Terceira Turma"
+      },
+      "dataAjuizamento": "2024-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 6226,
+          "nome": "Inclusão Indevida em Cadastro de Inadimplentes"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 239,
+          "nome": "Não-Provimento",
+          "dataHora": "2025-11-20T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "tribunal": "stj",
+    "payload": {
+      "numeroProcesso": "00001020020248260100",
+      "grau": "SUP",
+      "classe": {
+        "codigo": 1032,
+        "nome": "Recurso Especial"
+      },
+      "orgaoJulgador": {
+        "codigo": 9003,
+        "nome": "Terceira Turma"
+      },
+      "dataAjuizamento": "2024-02-10T10:00:00Z",
+      "nivelSigilo": 0,
+      "assuntos": [
+        {
+          "codigo": 6226,
+          "nome": "Inclusão Indevida em Cadastro de Inadimplentes"
+        }
+      ],
+      "movimentos": [
+        {
+          "codigo": 237,
+          "nome": "Provimento",
+          "dataHora": "2025-11-20T12:00:00Z"
+        }
+      ]
+    }
   }
 ]

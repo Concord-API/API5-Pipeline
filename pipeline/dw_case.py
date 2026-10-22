@@ -9,7 +9,7 @@ def load(cursor):
         FROM staging.case_event se
         JOIN dw.dim_court c ON c.court_code = upper(se.tribunal)
         LEFT JOIN dw.dim_case_class cc ON cc.class_name = se.case_class_name
-        ORDER BY se.case_number, se.extracted_at DESC
+        ORDER BY se.case_number, upper(se.tribunal) = 'STJ', se.extracted_at DESC
         ON CONFLICT (case_number) DO UPDATE SET
             court_level = EXCLUDED.court_level,
             extracted_at = EXCLUDED.extracted_at
