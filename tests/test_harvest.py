@@ -73,10 +73,10 @@ def test_commits_after_each_area_and_returns_the_total():
     assert cursor.connection.commits == 4
 
 
-def test_the_default_plan_covers_the_three_courts_and_only_known_areas():
+def test_the_default_plan_covers_the_state_courts_the_stj_and_only_known_areas():
     tpu = load()
 
-    assert TRIBUNALS == ("tjsp", "tjrj", "tjmg")
+    assert TRIBUNALS == ("tjsp", "tjrj", "tjmg", "stj")
     assert set(AREA_QUOTAS) <= set(tpu["areas"])
 
 
@@ -95,3 +95,20 @@ def test_queries_only_cases_with_a_verified_decision_movement():
 
     query = collect.calls[0]["query"]["bool"]
     assert {"terms": {"movimentos.codigo": [219, 220, 221, 237, 238, 239]}} in query["filter"]
+
+
+def test_datajud_url_points_to_the_stj_index():
+    assert datajud_url("stj") == "https://api-publica.datajud.cnj.jus.br/api_publica_stj/_search"
+
+
+def test_queries_the_stj_with_the_same_civil_cut_and_judgment_filter_as_the_state_courts():
+    tpu = load(FIXTURE_TPU)
+    collect = FakeCollect()
+
+    harvest(None, FakeCursor(), tpu, area_quotas={"899": 700}, collect=collect)
+
+    queries = {call["tribunal"]: call["query"] for call in collect.calls}
+    stj = queries["stj"]["bool"]
+    assert queries["stj"] == queries["tjsp"]
+    assert {"terms": {"movimentos.codigo": [219, 220, 221, 237, 238, 239]}} in stj["filter"]
+    assert {"terms": {"assuntos.codigo": [3568, 3593]}} in stj["must_not"]
