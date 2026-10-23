@@ -99,6 +99,40 @@ def test_discards_a_movement_without_occurred_at():
     assert flatten(1, "tjsp", "https://x", COLLECTED_AT, payload, tpu()) == []
 
 
+def test_discards_a_movement_dated_before_the_calendar():
+    payload = civil_payload(
+        movimentos=[
+            {"codigo": 11010, "nome": "Mero expediente", "dataHora": "1899-12-30T00:00:00.000Z"},
+            {"codigo": 219, "nome": "Procedência", "dataHora": "2024-06-01T12:00:00Z"},
+        ]
+    )
+
+    rows = flatten(1, "tjsp", "https://x", COLLECTED_AT, payload, tpu())
+
+    assert [row[11] for row in rows] == [219]
+
+
+def test_discards_a_movement_dated_after_the_collection():
+    payload = civil_payload(
+        movimentos=[
+            {"codigo": 92, "nome": "Publicação", "dataHora": "2033-06-09T00:00:00.000Z"},
+            {"codigo": 219, "nome": "Procedência", "dataHora": "2024-06-01T12:00:00Z"},
+        ]
+    )
+
+    rows = flatten(1, "tjsp", "https://x", COLLECTED_AT, payload, tpu())
+
+    assert [row[11] for row in rows] == [219]
+
+
+def test_keeps_a_movement_on_the_day_of_the_collection():
+    payload = civil_payload(
+        movimentos=[{"codigo": 219, "nome": "Procedência", "dataHora": "2026-01-02T20:00:00Z"}]
+    )
+
+    assert len(flatten(1, "tjsp", "https://x", COLLECTED_AT, payload, tpu())) == 1
+
+
 def test_discards_a_movement_without_a_code():
     payload = civil_payload(
         movimentos=[{"nome": "Procedência", "dataHora": "2024-06-01T12:00:00Z"}]
