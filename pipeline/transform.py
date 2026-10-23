@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timezone
 
+from pipeline.dw_date import FIRST_DAY
 from pipeline.stj_panels import panel_for
 from pipeline.tpu import class_codes, penal_subject_codes
 
@@ -34,6 +35,10 @@ def parse_datetime(value):
     return None
 
 
+def within_calendar(occurred_at, collected_at):
+    return FIRST_DAY <= occurred_at.date() <= collected_at.date()
+
+
 def flatten(raw_id, tribunal, source_url, collected_at, payload, tpu, movement_names=None):
     movement_names = movement_names or {}
     case_number = payload.get("numeroProcesso")
@@ -59,6 +64,8 @@ def flatten(raw_id, tribunal, source_url, collected_at, payload, tpu, movement_n
         occurred_at = parse_datetime(mov.get("dataHora"))
         code = mov.get("codigo")
         if not occurred_at or code is None:
+            continue
+        if not within_calendar(occurred_at, collected_at):
             continue
         name = mov.get("nome") or movement_names.get(str(code))
         if not name:
