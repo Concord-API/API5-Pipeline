@@ -3,11 +3,13 @@ from datetime import date
 
 import psycopg2
 import pytest
+import requests
 
 from pipeline import dw_precedent
 from pipeline.raw_schema import ensure as ensure_raw
 from pipeline.stj_precedents import (
     TEMAS_URL,
+    download,
     harvest,
     is_valid,
     parse_temas,
@@ -161,3 +163,59 @@ def test_keeps_the_payload_of_the_file_as_it_came(cursor):
     payload = cursor.fetchone()[0]
     assert payload["teseFirmada"].startswith("O reajuste")
     assert json.dumps(payload)
+
+
+class FakeResponse:
+    def __init__(self, status, text=""):
+        self.status_code = status
+        self.text = text
+        self.encoding = None
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.HTTPError(str(self.status_code))
+
+
+def test_downloads_the_file_as_utf8(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        requests, "get", lambda url, **kwargs: calls.append(url) or FakeResponse(200, "ok")
+    )
+
+    assert download(TEMAS_URL, sleep=lambda seconds: None) == "ok"
+    assert calls == [TEMAS_URL]
+
+
+def test_retries_while_the_portal_is_down(monkeypatch):
+    responses = iter([FakeResponse(504), FakeResponse(429), FakeResponse(200, "ok")])
+    monkeypatch.setattr(requests, "get", lambda url, **kwargs: next(responses))
+
+    assert download(TEMAS_URL, sleep=lambda seconds: None) == "ok"
+
+
+def test_retries_after_a_connection_error(monkeypatch):
+    attempts = []
+
+    def get(url, **kwargs):
+        attempts.append(url)
+        if len(attempts) == 1:
+            raise requests.ConnectionError("down")
+        return FakeResponse(200, "ok")
+
+    monkeypatch.setattr(requests, "get", get)
+
+    assert download(TEMAS_URL, sleep=lambda seconds: None) == "ok"
+
+
+def test_gives_up_when_the_portal_never_answers(monkeypatch):
+    monkeypatch.setattr(requests, "get", lambda url, **kwargs: FakeResponse(504))
+
+    with pytest.raises(requests.RequestException):
+        download(TEMAS_URL, retries=2, sleep=lambda seconds: None)
+
+
+def test_reports_a_client_error_at_once(monkeypatch):
+    monkeypatch.setattr(requests, "get", lambda url, **kwargs: FakeResponse(404))
+
+    with pytest.raises(requests.HTTPError):
+        download(TEMAS_URL, sleep=lambda seconds: None)

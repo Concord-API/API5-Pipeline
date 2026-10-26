@@ -30,3 +30,11 @@ def test_reports_a_missing_database(monkeypatch, capsys):
 
     assert main([]) == 1
     assert "DATABASE_URL" in capsys.readouterr().err
+
+
+def test_reports_a_file_that_does_not_exist(postgres_url, monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("DATABASE_URL", postgres_url)
+
+    assert main(["--file", str(tmp_path / "nada.csv")]) == 1
+    assert "error:" in capsys.readouterr().err
+
