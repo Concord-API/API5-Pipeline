@@ -8,6 +8,7 @@ from pipeline import (
     dw_doctrine,
     dw_fact,
     dw_movement_polarity,
+    dw_precedent,
     dw_reference,
     dw_subject,
     integrity,
@@ -79,6 +80,7 @@ def run(cursor, dsn, tpu, groups, output_path, runner=None, encoder=local_encode
     today = datetime.now(timezone.utc).date()
     transform_all(cursor, tpu)
     load_dimensions(cursor, tpu, today.year + 1)
+    dw_precedent.load(cursor, dw_precedent.area_codes(tpu))
     doctrine_link.link(cursor, encoder)
     load_themes(cursor, groups)
     strength_config.seed(cursor, today.year)
