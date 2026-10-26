@@ -218,7 +218,7 @@ def test_generates_the_text_of_a_judged_theme_from_the_aggregates(cursor):
     [(theme_key, lead, body, origin, version, generated_at)] = narratives(cursor)
     assert theme_key == 1
     assert lead[1] == {"ratio": 0.6667, "n": 3, "unit": "decisões"}
-    assert lead[2] == {"text": " julgadas, houve acolhimento da pretensão do autor."}
+    assert lead[2] == {"text": ", o autor ganhou."}
     assert body[0] == {"text": "As decisões vêm de 1 tribunal, em 2025."}
     assert (origin, version, generated_at) == ("template", "1.0", date(2026, 9, 23))
 
