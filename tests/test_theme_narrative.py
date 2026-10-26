@@ -28,7 +28,7 @@ def test_the_lead_opens_with_the_upheld_ratio_and_its_judged_count():
     assert lead == [
         {"text": "Em "},
         {"ratio": 0.9861, "n": 144, "unit": "decisões"},
-        {"text": " julgadas, houve acolhimento da pretensão do autor."},
+        {"text": ", o autor ganhou."},
     ]
 
 
@@ -68,10 +68,10 @@ def test_the_body_separates_merit_and_appeal_when_both_exist():
     _, body = compose(facts)
 
     assert body[2:] == [
-        {"text": " No mérito, houve acolhimento em "},
+        {"text": " No julgamento do pedido, o autor ganhou em "},
         {"ratio": 0.9861, "n": 144, "unit": "decisões"},
         {"text": "."},
-        {"text": " Nos recursos, houve provimento em "},
+        {"text": " Nos recursos, o recurso foi aceito em "},
         {"ratio": 0.25, "n": 12, "unit": "decisões"},
         {"text": "."},
     ]
@@ -85,7 +85,7 @@ def test_the_lead_writes_the_count_below_the_percentage_floor():
     assert lead == [
         {"text": "Há "},
         {"count": 1, "unit": "decisão"},
-        {"text": " julgada, com acolhimento da pretensão do autor."},
+        {"text": " julgada: o autor ganhou."},
     ]
 
 
@@ -103,13 +103,43 @@ def test_the_floor_applies_to_each_family_on_its_own():
     _, body = compose(facts)
 
     assert body[2:] == [
-        {"text": " No mérito, houve acolhimento em "},
+        {"text": " No julgamento do pedido, o autor ganhou em "},
         {"ratio": 0.7, "n": 30, "unit": "decisões"},
         {"text": "."},
         {"text": " Nos recursos, há "},
         {"count": 1, "unit": "decisão"},
         {"text": " julgada."},
     ]
+
+
+@pytest.mark.parametrize(
+    ("label", "winner"),
+    [
+        ("acolhimento da pretensão do autor", "o autor ganhou"),
+        ("acolhimento da pretensão de quem propôs (autor não identificado)",
+         "quem entrou com a ação ganhou"),
+        ("acolhimento da pretensão de quem recorreu", "o recurso foi aceito"),
+        ("acolhimento da pretensão da Fazenda Pública", "a Fazenda Pública ganhou"),
+        ("acolhimento da pretensão do credor/exequente", "o credor ganhou"),
+        ("acolhimento da pretensão da parte defensiva (embargante/impetrante)",
+         "quem se defendeu ganhou"),
+    ],
+)
+def test_the_lead_says_who_won_in_plain_words(label, winner):
+    lead, _ = compose({**FACTS, "polarity_label": label})
+
+    assert lead[-1] == {"text": f", {winner}."}
+
+
+def test_no_opening_uses_the_legal_jargon():
+    facts = {**FACTS, "appeal_judged": 12, "appeal_ratio": 0.25,
+             "polarity_label": "acolhimento da pretensão de quem propôs (autor não identificado)"}
+
+    lead, body = compose(facts)
+
+    text = "".join(segment.get("text", "") for segment in lead + body)
+    for word in ("pretensão", "acolhimento", "provimento", "polaridade"):
+        assert word not in text
 
 
 def test_no_percentage_is_written_over_a_single_decision():
@@ -188,7 +218,7 @@ def test_generates_the_text_of_a_judged_theme_from_the_aggregates(cursor):
     [(theme_key, lead, body, origin, version, generated_at)] = narratives(cursor)
     assert theme_key == 1
     assert lead[1] == {"ratio": 0.6667, "n": 3, "unit": "decisões"}
-    assert lead[2] == {"text": " julgadas, houve acolhimento da pretensão do autor."}
+    assert lead[2] == {"text": ", o autor ganhou."}
     assert body[0] == {"text": "As decisões vêm de 1 tribunal, em 2025."}
     assert (origin, version, generated_at) == ("template", "1.0", date(2026, 9, 23))
 

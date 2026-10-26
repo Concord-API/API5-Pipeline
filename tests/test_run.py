@@ -115,7 +115,7 @@ def same_vector_encoder(texts):
     return [[1.0, 0.0] for _ in texts]
 
 
-def run_once(postgres_container, dw_ready, tmp_path, extra_raw=()):
+def run_once(postgres_container, dw_ready, tmp_path, extra_raw=(), extra_precedents=()):
     tpu = load_tpu(FIXTURE_TPU)
     local_dsn = (
         f"postgresql://{postgres_container.username}:{postgres_container.password}"
@@ -148,6 +148,9 @@ def run_once(postgres_container, dw_ready, tmp_path, extra_raw=()):
             insert(cursor)
         cursor.execute("TRUNCATE raw.doctrine_article RESTART IDENTITY")
         insert_raw_doctrine(cursor)
+        cursor.execute("TRUNCATE raw.stj_precedent")
+        for insert in extra_precedents:
+            insert(cursor)
 
         output_path = tmp_path / "load.sql"
         run(
@@ -289,3 +292,34 @@ def test_run_does_not_write_the_load_file_when_the_integrity_fails(
         run_once(postgres_container, dw_ready, tmp_path)
 
     assert not (tmp_path / "load.sql").exists()
+
+
+def insert_raw_precedent(cursor):
+    payload = {
+        "tipoPrecedente": "Tema",
+        "numeroPrecedente": "952",
+        "teseFirmada": "O reajuste previsto em contrato é válido.",
+        "questaoSubmetidaAJulgamento": "Validade do reajuste.",
+        "situacao": "Trânsito em Julgado",
+        "dataJulgamento": "2016-12-14",
+        "orgaoJulgador": "S2",
+        "Assuntos": "1127- Contratos",
+    }
+    cursor.execute(
+        "INSERT INTO raw.stj_precedent (kind, number, source_url, payload) VALUES (%s, %s, %s, %s)",
+        ("Tema", 952, "https://dadosabertos.web.stj.jus.br/temas.csv", json.dumps(payload)),
+    )
+
+
+def test_run_links_the_stj_theses_to_the_theme_subjects(postgres_container, dw_ready, tmp_path):
+    content = run_once(
+        postgres_container, dw_ready, tmp_path, extra_precedents=[insert_raw_precedent]
+    )
+
+    assert "COPY dw.dim_precedent" in content
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT p.precedent_number, s.subject_name FROM dw.bridge_subject_precedent b "
+            "JOIN dw.dim_precedent p USING (precedent_sk) JOIN dw.dim_subject s USING (subject_sk)"
+        )
+        assert cursor.fetchall() == [(952, "Contratos")]

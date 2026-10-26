@@ -63,16 +63,33 @@ def _courts_and_period(facts):
     return f"{sentence}, entre {start} e {end}."
 
 
+WINNERS = {
+    "acolhimento da pretensão do autor": "o autor ganhou",
+    "acolhimento da pretensão de quem propôs (autor não identificado)":
+        "quem entrou com a ação ganhou",
+    "acolhimento da pretensão de quem recorreu": "o recurso foi aceito",
+    "acolhimento da pretensão da Fazenda Pública": "a Fazenda Pública ganhou",
+    "acolhimento da pretensão do credor/exequente": "o credor ganhou",
+    "acolhimento da pretensão da parte defensiva (embargante/impetrante)":
+        "quem se defendeu ganhou",
+    "acolhimento da pretensão acusatória (procedência = condenação)": "a acusação ganhou",
+}
+
+
+def winner(label):
+    return WINNERS.get(label, f"houve {label}")
+
+
 def compose(facts):
     floor = facts["percentage_floor"]
-    judged, label = facts["judged"], facts["polarity_label"]
+    judged, who = facts["judged"], winner(facts["polarity_label"])
     if judged < floor:
-        lead = [{"text": "Há "}, _count(judged), {"text": f" {_judged(judged)}, com {label}."}]
+        lead = [{"text": "Há "}, _count(judged), {"text": f" {_judged(judged)}: {who}."}]
     else:
         lead = [
             {"text": "Em "},
             _ratio(facts["upheld_ratio"], judged),
-            {"text": f" julgadas, houve {label}."},
+            {"text": f", {who}."},
         ]
     body = [{"text": _courts_and_period(facts)}]
     last_decision = facts["last_decision_date"]
@@ -81,8 +98,8 @@ def compose(facts):
     if facts["merit_judged"] > 0 and facts["appeal_judged"] > 0:
         body.extend(
             _family(
-                " No mérito, houve acolhimento em ",
-                " No mérito, há ",
+                f" No julgamento do pedido, {who} em ",
+                " No julgamento do pedido, há ",
                 facts["merit_ratio"],
                 facts["merit_judged"],
                 floor,
@@ -90,7 +107,7 @@ def compose(facts):
         )
         body.extend(
             _family(
-                " Nos recursos, houve provimento em ",
+                " Nos recursos, o recurso foi aceito em ",
                 " Nos recursos, há ",
                 facts["appeal_ratio"],
                 facts["appeal_judged"],
