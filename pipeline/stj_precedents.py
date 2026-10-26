@@ -14,7 +14,7 @@ TEMA_PAGE = (
     "https://processo.stj.jus.br/repetitivos/temas_repetitivos/pesquisa.jsp"
     "?novaConsulta=true&tipo_pesquisa=T&cod_tema_inicial={number}&cod_tema_final={number}"
 )
-SUBJECT_CODE = re.compile(r"(\d+)\s*-")
+SUBJECT_CODE = re.compile(r"(\d+) ?-")
 
 
 def subject_codes(text):

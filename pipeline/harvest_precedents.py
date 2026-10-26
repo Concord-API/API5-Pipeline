@@ -3,7 +3,6 @@ import sys
 from pathlib import Path
 
 import psycopg2
-import requests
 
 from pipeline import config, stj_precedents
 from pipeline.raw_schema import ensure
@@ -32,7 +31,7 @@ def main(argv=None):
         with psycopg2.connect(dsn) as connection, connection.cursor() as cursor:
             ensure(cursor)
             stored = stj_precedents.harvest(cursor, fetch)
-    except (requests.RequestException, psycopg2.Error, OSError) as error:
+    except (psycopg2.Error, OSError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     print(f"STJ precedents harvest: {stored} STJ themes")
