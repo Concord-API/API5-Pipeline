@@ -49,11 +49,11 @@ CREATE FUNCTION dw.norm_pt(txt text) RETURNS text
 
 
 --
--- Name: search_themes(text, integer); Type: FUNCTION; Schema: dw; Owner: -
+-- Name: search_themes(text, integer, text[], integer, text[], integer); Type: FUNCTION; Schema: dw; Owner: -
 --
 
-CREATE FUNCTION dw.search_themes(p_query text, p_limit integer DEFAULT 20) RETURNS TABLE(theme_key bigint, theme_name text, subject_area text, rank real, "position" bigint)
-    LANGUAGE sql STABLE STRICT PARALLEL SAFE
+CREATE FUNCTION dw.search_themes(p_query text, p_limit integer DEFAULT 20, p_courts text[] DEFAULT NULL::text[], p_period_years integer DEFAULT NULL::integer, p_levels text[] DEFAULT NULL::text[], p_min_score integer DEFAULT NULL::integer) RETURNS TABLE(theme_key bigint, theme_name text, subject_area text, rank real, "position" bigint)
+    LANGUAGE sql STABLE PARALLEL SAFE
     AS $$
     WITH ranked AS (
         SELECT t.theme_sk,
@@ -76,17 +76,44 @@ CREATE FUNCTION dw.search_themes(p_query text, p_limit integer DEFAULT 20) RETUR
     JOIN dw.theme_strength ts ON ts.theme_sk = r.theme_sk
     WHERE r.rank >= 0.5
       AND s.judged_case_count > 0
+      AND (p_min_score IS NULL OR ts.score >= p_min_score)
+      AND ((p_courts IS NULL AND p_period_years IS NULL AND p_levels IS NULL)
+           OR dw.theme_matches_filters(r.theme_sk, p_courts, p_period_years, p_levels))
     ORDER BY position
     LIMIT p_limit
 $$;
 
 
 --
--- Name: top_themes(integer); Type: FUNCTION; Schema: dw; Owner: -
+-- Name: theme_matches_filters(bigint, text[], integer, text[]); Type: FUNCTION; Schema: dw; Owner: -
 --
 
-CREATE FUNCTION dw.top_themes(p_limit integer DEFAULT 20) RETURNS TABLE(theme_key bigint, theme_name text, subject_area text, rank real, "position" bigint)
-    LANGUAGE sql STABLE STRICT PARALLEL SAFE
+CREATE FUNCTION dw.theme_matches_filters(p_theme_sk bigint, p_courts text[], p_period_years integer, p_levels text[]) RETURNS boolean
+    LANGUAGE sql STABLE PARALLEL SAFE
+    AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM dw.bridge_theme_subject bts
+        JOIN dw.bridge_case_subject bcs ON bcs.subject_sk = bts.subject_sk
+        JOIN dw.case_current_result ccr ON ccr.case_sk = bcs.case_sk
+        JOIN dw.dim_case dc ON dc.case_sk = ccr.case_sk
+        JOIN dw.dim_court c ON c.court_sk = ccr.court_sk
+        LEFT JOIN dw.dim_date d ON d.date_sk = ccr.date_sk
+        WHERE bts.theme_sk = p_theme_sk
+          AND (p_courts IS NULL OR c.court_code = ANY (p_courts))
+          AND (p_levels IS NULL OR dc.court_level = ANY (p_levels))
+          AND (p_period_years IS NULL
+               OR d.year > (SELECT cfg.reference_year FROM dw.strength_config cfg WHERE cfg.id = 1) - p_period_years)
+    )
+$$;
+
+
+--
+-- Name: top_themes(integer, text[], integer, text[], integer); Type: FUNCTION; Schema: dw; Owner: -
+--
+
+CREATE FUNCTION dw.top_themes(p_limit integer DEFAULT 20, p_courts text[] DEFAULT NULL::text[], p_period_years integer DEFAULT NULL::integer, p_levels text[] DEFAULT NULL::text[], p_min_score integer DEFAULT NULL::integer) RETURNS TABLE(theme_key bigint, theme_name text, subject_area text, rank real, "position" bigint)
+    LANGUAGE sql STABLE PARALLEL SAFE
     AS $$
     SELECT t.theme_key,
            t.theme_name,
@@ -97,6 +124,9 @@ CREATE FUNCTION dw.top_themes(p_limit integer DEFAULT 20) RETURNS TABLE(theme_ke
     JOIN dw.theme_summary s ON s.theme_sk = t.theme_sk
     LEFT JOIN dw.theme_strength ts ON ts.theme_sk = t.theme_sk
     WHERE s.judged_case_count > 0
+      AND (p_min_score IS NULL OR ts.score >= p_min_score)
+      AND ((p_courts IS NULL AND p_period_years IS NULL AND p_levels IS NULL)
+           OR dw.theme_matches_filters(t.theme_sk, p_courts, p_period_years, p_levels))
     ORDER BY position
     LIMIT p_limit
 $$;
@@ -191,6 +221,16 @@ CREATE TABLE dw.bridge_subject_doctrine (
     link_method text NOT NULL,
     similarity real,
     embedding_model text
+);
+
+
+--
+-- Name: bridge_subject_precedent; Type: TABLE; Schema: dw; Owner: -
+--
+
+CREATE TABLE dw.bridge_subject_precedent (
+    subject_sk bigint NOT NULL,
+    precedent_sk bigint NOT NULL
 );
 
 
@@ -487,6 +527,39 @@ ALTER TABLE dw.dim_movement ALTER COLUMN movement_sk ADD GENERATED ALWAYS AS IDE
 
 
 --
+-- Name: dim_precedent; Type: TABLE; Schema: dw; Owner: -
+--
+
+CREATE TABLE dw.dim_precedent (
+    precedent_sk bigint NOT NULL,
+    precedent_kind text NOT NULL,
+    precedent_number integer NOT NULL,
+    thesis text NOT NULL,
+    question text,
+    status text NOT NULL,
+    judged_at date,
+    judging_body text,
+    source text DEFAULT 'stj_precedentes'::text NOT NULL,
+    source_url text NOT NULL,
+    extracted_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: dim_precedent_precedent_sk_seq; Type: SEQUENCE; Schema: dw; Owner: -
+--
+
+ALTER TABLE dw.dim_precedent ALTER COLUMN precedent_sk ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME dw.dim_precedent_precedent_sk_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: dim_subject; Type: TABLE; Schema: dw; Owner: -
 --
 
@@ -595,81 +668,56 @@ CREATE TABLE dw.strength_config (
 
 
 --
--- Name: theme_narrative; Type: TABLE; Schema: dw; Owner: -
+-- Name: theme_by_court; Type: MATERIALIZED VIEW; Schema: dw; Owner: -
 --
 
-CREATE TABLE dw.theme_narrative (
-    theme_sk bigint NOT NULL,
-    lead jsonb NOT NULL,
-    body jsonb NOT NULL,
-    text_origin text NOT NULL,
-    methodology_version text NOT NULL,
-    generated_at date NOT NULL,
-    CONSTRAINT theme_narrative_text_origin_check CHECK ((text_origin = ANY (ARRAY['template'::text, 'curated'::text])))
-);
-
-
---
--- Name: theme_outcome_distribution; Type: MATERIALIZED VIEW; Schema: dw; Owner: -
---
-
-CREATE MATERIALIZED VIEW dw.theme_outcome_distribution AS
+CREATE MATERIALIZED VIEW dw.theme_by_court AS
  SELECT bts.theme_sk,
-    ccr.polarity_reference,
-    count(DISTINCT ccr.case_sk) AS judged_count,
-    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'Granted'::text)) AS upheld_count,
-    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'PartiallyGranted'::text)) AS partially_upheld_count,
-    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'Denied'::text)) AS rejected_count
-   FROM (((dw.bridge_theme_subject bts
+    c.court_code,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE ((ccr.polarity_reference = 'pretensao_autor'::text) AND (o.outcome_code = ANY (ARRAY['Granted'::text, 'PartiallyGranted'::text])))) AS claim_upheld_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE ((ccr.polarity_reference = 'pretensao_autor'::text) AND (o.outcome_code = 'Denied'::text))) AS claim_rejected_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE ((ccr.polarity_reference = 'pretensao_recorrente'::text) AND (o.outcome_code = ANY (ARRAY['Granted'::text, 'PartiallyGranted'::text])))) AS appeal_upheld_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE ((ccr.polarity_reference = 'pretensao_recorrente'::text) AND (o.outcome_code = 'Denied'::text))) AS appeal_rejected_count
+   FROM ((((dw.bridge_theme_subject bts
      JOIN dw.bridge_case_subject bcs ON ((bcs.subject_sk = bts.subject_sk)))
      JOIN dw.case_current_result ccr ON ((ccr.case_sk = bcs.case_sk)))
+     JOIN dw.dim_court c ON ((c.court_sk = ccr.court_sk)))
      JOIN dw.dim_decision_outcome o ON ((o.outcome_sk = ccr.outcome_sk)))
-  GROUP BY bts.theme_sk, ccr.polarity_reference
+  GROUP BY bts.theme_sk, c.court_code
   WITH NO DATA;
 
 
 --
--- Name: theme_provenance; Type: VIEW; Schema: dw; Owner: -
+-- Name: theme_by_judging_body; Type: MATERIALIZED VIEW; Schema: dw; Owner: -
 --
 
-CREATE VIEW dw.theme_provenance AS
- WITH theme_cases AS (
-         SELECT DISTINCT bts.theme_sk,
-            bcs.case_sk
-           FROM (dw.bridge_theme_subject bts
+CREATE MATERIALIZED VIEW dw.theme_by_judging_body AS
+ WITH judged AS (
+         SELECT bts.theme_sk,
+            c.court_code,
+            jb.body_name,
+            public.unaccent(lower(jb.body_name)) AS plain_name,
+            ccr.case_sk,
+            ccr.polarity_reference,
+            o.outcome_code
+           FROM (((((dw.bridge_theme_subject bts
              JOIN dw.bridge_case_subject bcs ON ((bcs.subject_sk = bts.subject_sk)))
-        ), theme_doctrine AS (
-         SELECT DISTINCT bts.theme_sk,
-            bsd.doctrine_sk
-           FROM (dw.bridge_theme_subject bts
-             JOIN dw.bridge_subject_doctrine bsd ON ((bsd.subject_sk = bts.subject_sk)))
-        ), sources AS (
-         SELECT tc.theme_sk,
-            'cases'::text AS block,
-            f.source,
-            max(f.extracted_at) AS extracted_at,
-            count(DISTINCT f.case_sk) AS row_count
-           FROM (theme_cases tc
-             JOIN dw.fact_case_event f ON ((f.case_sk = tc.case_sk)))
-          GROUP BY tc.theme_sk, f.source
-        UNION ALL
-         SELECT td.theme_sk,
-            'doctrine'::text AS block,
-            d.source,
-            max(d.extracted_at) AS extracted_at,
-            count(*) AS row_count
-           FROM (theme_doctrine td
-             JOIN dw.dim_doctrine d ON ((d.doctrine_sk = td.doctrine_sk)))
-          GROUP BY td.theme_sk, d.source
+             JOIN dw.case_current_result ccr ON ((ccr.case_sk = bcs.case_sk)))
+             JOIN dw.dim_court c ON ((c.court_sk = ccr.court_sk)))
+             JOIN dw.dim_decision_outcome o ON ((o.outcome_sk = ccr.outcome_sk)))
+             LEFT JOIN dw.dim_judging_body jb ON ((jb.judging_body_sk = ccr.judging_body_sk)))
         )
- SELECT s.theme_sk,
-    s.block,
-    s.source,
-    s.extracted_at,
-    s.row_count,
-    cfg.methodology_version
-   FROM (sources s
-     LEFT JOIN dw.strength_config cfg ON (true));
+ SELECT theme_sk,
+    court_code,
+    body_name,
+    COALESCE(((plain_name ~ '(camara|turma|secao|orgao especial|corte especial|plenario)'::text) AND (plain_name !~ '(recursal|gabinete|\mgab\M|vara|presidencia|juizado)'::text)), false) AS is_panel,
+    count(DISTINCT case_sk) FILTER (WHERE ((polarity_reference = 'pretensao_autor'::text) AND (outcome_code = ANY (ARRAY['Granted'::text, 'PartiallyGranted'::text])))) AS claim_upheld_count,
+    count(DISTINCT case_sk) FILTER (WHERE ((polarity_reference = 'pretensao_autor'::text) AND (outcome_code = 'Denied'::text))) AS claim_rejected_count,
+    count(DISTINCT case_sk) FILTER (WHERE ((polarity_reference = 'pretensao_recorrente'::text) AND (outcome_code = ANY (ARRAY['Granted'::text, 'PartiallyGranted'::text])))) AS appeal_upheld_count,
+    count(DISTINCT case_sk) FILTER (WHERE ((polarity_reference = 'pretensao_recorrente'::text) AND (outcome_code = 'Denied'::text))) AS appeal_rejected_count
+   FROM judged
+  GROUP BY theme_sk, court_code, body_name, plain_name
+  WITH NO DATA;
 
 
 --
@@ -907,6 +955,186 @@ CREATE MATERIALIZED VIEW dw.theme_strength AS
 
 
 --
+-- Name: theme_by_year; Type: MATERIALIZED VIEW; Schema: dw; Owner: -
+--
+
+CREATE MATERIALIZED VIEW dw.theme_by_year AS
+ SELECT bts.theme_sk,
+    d.year,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE ((ccr.polarity_reference = 'pretensao_autor'::text) AND (ts.agreement_basis = 'pretensao_autor'::text) AND (o.outcome_code = ANY (ARRAY['Granted'::text, 'PartiallyGranted'::text])))) AS claim_upheld_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE ((ccr.polarity_reference = 'pretensao_autor'::text) AND (ts.agreement_basis = 'pretensao_autor'::text) AND (o.outcome_code = 'Denied'::text))) AS claim_rejected_count
+   FROM (((((dw.bridge_theme_subject bts
+     JOIN dw.bridge_case_subject bcs ON ((bcs.subject_sk = bts.subject_sk)))
+     JOIN dw.case_current_result ccr ON ((ccr.case_sk = bcs.case_sk)))
+     JOIN dw.dim_date d ON ((d.date_sk = ccr.date_sk)))
+     JOIN dw.dim_decision_outcome o ON ((o.outcome_sk = ccr.outcome_sk)))
+     JOIN dw.theme_strength ts ON ((ts.theme_sk = bts.theme_sk)))
+  GROUP BY bts.theme_sk, d.year
+  WITH NO DATA;
+
+
+--
+-- Name: theme_case_sample; Type: VIEW; Schema: dw; Owner: -
+--
+
+CREATE VIEW dw.theme_case_sample AS
+ WITH theme_cases AS (
+         SELECT DISTINCT t.theme_sk,
+            t.theme_key,
+            bcs.case_sk
+           FROM ((dw.dim_theme t
+             JOIN dw.bridge_theme_subject bts ON ((bts.theme_sk = t.theme_sk)))
+             JOIN dw.bridge_case_subject bcs ON ((bcs.subject_sk = bts.subject_sk)))
+        ), judged AS (
+         SELECT tc.theme_sk,
+            tc.theme_key,
+            ccr.case_sk,
+            ccr.judging_body_sk,
+            ccr.date_sk,
+            ccr.polarity_reference,
+            c.court_code,
+            c.court_name,
+            o.outcome_code,
+            o.outcome_label
+           FROM (((theme_cases tc
+             JOIN dw.case_current_result ccr ON ((ccr.case_sk = tc.case_sk)))
+             JOIN dw.dim_court c ON ((c.court_sk = ccr.court_sk)))
+             JOIN dw.dim_decision_outcome o ON ((o.outcome_sk = ccr.outcome_sk)))
+        ), case_details AS (
+         SELECT dc.case_sk,
+            dc.case_number,
+            dc.case_number_formatted,
+            cc.class_name AS case_class,
+            dc.court_level,
+            dc.secrecy_level,
+            dc.source,
+            dc.source_link,
+            dc.source_link_type
+           FROM (dw.dim_case dc
+             LEFT JOIN dw.dim_case_class cc ON ((cc.case_class_sk = dc.case_class_sk)))
+        )
+ SELECT j.theme_sk,
+    j.theme_key,
+    j.case_sk,
+    cd.case_number,
+    cd.case_number_formatted,
+    j.court_code,
+    j.court_name,
+    jb.body_name AS judging_body,
+    cd.case_class,
+    cd.court_level,
+    d.full_date AS decision_date,
+    j.outcome_code,
+    j.outcome_label,
+    j.polarity_reference,
+    cd.secrecy_level,
+    cd.source,
+    cd.source_link,
+    cd.source_link_type
+   FROM (((judged j
+     JOIN case_details cd ON ((cd.case_sk = j.case_sk)))
+     LEFT JOIN dw.dim_judging_body jb ON ((jb.judging_body_sk = j.judging_body_sk)))
+     LEFT JOIN dw.dim_date d ON ((d.date_sk = j.date_sk)));
+
+
+--
+-- Name: theme_court_activity; Type: MATERIALIZED VIEW; Schema: dw; Owner: -
+--
+
+CREATE MATERIALIZED VIEW dw.theme_court_activity AS
+ SELECT bts.theme_sk,
+    c.court_code,
+    count(DISTINCT ccr.case_sk) AS decision_count,
+    max(d.full_date) AS last_decision_date
+   FROM ((((dw.bridge_theme_subject bts
+     JOIN dw.bridge_case_subject bcs ON ((bcs.subject_sk = bts.subject_sk)))
+     JOIN dw.case_current_result ccr ON ((ccr.case_sk = bcs.case_sk)))
+     JOIN dw.dim_court c ON ((c.court_sk = ccr.court_sk)))
+     LEFT JOIN dw.dim_date d ON ((d.date_sk = ccr.date_sk)))
+  GROUP BY bts.theme_sk, c.court_code
+  WITH NO DATA;
+
+
+--
+-- Name: theme_narrative; Type: TABLE; Schema: dw; Owner: -
+--
+
+CREATE TABLE dw.theme_narrative (
+    theme_sk bigint NOT NULL,
+    lead jsonb NOT NULL,
+    body jsonb NOT NULL,
+    text_origin text NOT NULL,
+    methodology_version text NOT NULL,
+    generated_at date NOT NULL,
+    CONSTRAINT theme_narrative_text_origin_check CHECK ((text_origin = ANY (ARRAY['template'::text, 'curated'::text])))
+);
+
+
+--
+-- Name: theme_outcome_distribution; Type: MATERIALIZED VIEW; Schema: dw; Owner: -
+--
+
+CREATE MATERIALIZED VIEW dw.theme_outcome_distribution AS
+ SELECT bts.theme_sk,
+    ccr.polarity_reference,
+    count(DISTINCT ccr.case_sk) AS judged_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'Granted'::text)) AS upheld_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'PartiallyGranted'::text)) AS partially_upheld_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'Denied'::text)) AS rejected_count
+   FROM (((dw.bridge_theme_subject bts
+     JOIN dw.bridge_case_subject bcs ON ((bcs.subject_sk = bts.subject_sk)))
+     JOIN dw.case_current_result ccr ON ((ccr.case_sk = bcs.case_sk)))
+     JOIN dw.dim_decision_outcome o ON ((o.outcome_sk = ccr.outcome_sk)))
+  GROUP BY bts.theme_sk, ccr.polarity_reference
+  WITH NO DATA;
+
+
+--
+-- Name: theme_provenance; Type: MATERIALIZED VIEW; Schema: dw; Owner: -
+--
+
+CREATE MATERIALIZED VIEW dw.theme_provenance AS
+ WITH theme_cases AS (
+         SELECT DISTINCT bts.theme_sk,
+            bcs.case_sk
+           FROM (dw.bridge_theme_subject bts
+             JOIN dw.bridge_case_subject bcs ON ((bcs.subject_sk = bts.subject_sk)))
+        ), theme_doctrine AS (
+         SELECT DISTINCT bts.theme_sk,
+            bsd.doctrine_sk
+           FROM (dw.bridge_theme_subject bts
+             JOIN dw.bridge_subject_doctrine bsd ON ((bsd.subject_sk = bts.subject_sk)))
+        ), sources AS (
+         SELECT tc.theme_sk,
+            'cases'::text AS block,
+            f.source,
+            max(f.extracted_at) AS extracted_at,
+            count(DISTINCT f.case_sk) AS row_count
+           FROM (theme_cases tc
+             JOIN dw.fact_case_event f ON ((f.case_sk = tc.case_sk)))
+          GROUP BY tc.theme_sk, f.source
+        UNION ALL
+         SELECT td.theme_sk,
+            'doctrine'::text AS block,
+            d.source,
+            max(d.extracted_at) AS extracted_at,
+            count(*) AS row_count
+           FROM (theme_doctrine td
+             JOIN dw.dim_doctrine d ON ((d.doctrine_sk = td.doctrine_sk)))
+          GROUP BY td.theme_sk, d.source
+        )
+ SELECT s.theme_sk,
+    s.block,
+    s.source,
+    s.extracted_at,
+    s.row_count,
+    cfg.methodology_version
+   FROM (sources s
+     LEFT JOIN dw.strength_config cfg ON (true))
+  WITH NO DATA;
+
+
+--
 -- Name: bridge_case_subject bridge_case_subject_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
 --
 
@@ -920,6 +1148,14 @@ ALTER TABLE ONLY dw.bridge_case_subject
 
 ALTER TABLE ONLY dw.bridge_subject_doctrine
     ADD CONSTRAINT bridge_subject_doctrine_pkey PRIMARY KEY (subject_sk, doctrine_sk);
+
+
+--
+-- Name: bridge_subject_precedent bridge_subject_precedent_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.bridge_subject_precedent
+    ADD CONSTRAINT bridge_subject_precedent_pkey PRIMARY KEY (subject_sk, precedent_sk);
 
 
 --
@@ -1067,6 +1303,22 @@ ALTER TABLE ONLY dw.dim_movement
 
 
 --
+-- Name: dim_precedent dim_precedent_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.dim_precedent
+    ADD CONSTRAINT dim_precedent_pkey PRIMARY KEY (precedent_sk);
+
+
+--
+-- Name: dim_precedent dim_precedent_precedent_kind_precedent_number_key; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.dim_precedent
+    ADD CONSTRAINT dim_precedent_precedent_kind_precedent_number_key UNIQUE (precedent_kind, precedent_number);
+
+
+--
 -- Name: dim_subject dim_subject_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
 --
 
@@ -1143,6 +1395,13 @@ ALTER TABLE ONLY dw.theme_narrative
 --
 
 CREATE INDEX idx_bridge_case_subject_subject ON dw.bridge_case_subject USING btree (subject_sk);
+
+
+--
+-- Name: idx_bridge_subject_precedent_precedent; Type: INDEX; Schema: dw; Owner: -
+--
+
+CREATE INDEX idx_bridge_subject_precedent_precedent ON dw.bridge_subject_precedent USING btree (precedent_sk);
 
 
 --
@@ -1251,10 +1510,45 @@ CREATE INDEX idx_fact_case_event_movement ON dw.fact_case_event USING btree (mov
 
 
 --
+-- Name: idx_theme_by_court_pk; Type: INDEX; Schema: dw; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_theme_by_court_pk ON dw.theme_by_court USING btree (theme_sk, court_code);
+
+
+--
+-- Name: idx_theme_by_judging_body_pk; Type: INDEX; Schema: dw; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_theme_by_judging_body_pk ON dw.theme_by_judging_body USING btree (theme_sk, court_code, body_name) NULLS NOT DISTINCT;
+
+
+--
+-- Name: idx_theme_by_year_pk; Type: INDEX; Schema: dw; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_theme_by_year_pk ON dw.theme_by_year USING btree (theme_sk, year);
+
+
+--
+-- Name: idx_theme_court_activity_pk; Type: INDEX; Schema: dw; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_theme_court_activity_pk ON dw.theme_court_activity USING btree (theme_sk, court_code);
+
+
+--
 -- Name: idx_theme_outcome_distribution_pk; Type: INDEX; Schema: dw; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_theme_outcome_distribution_pk ON dw.theme_outcome_distribution USING btree (theme_sk, polarity_reference);
+
+
+--
+-- Name: idx_theme_provenance_pk; Type: INDEX; Schema: dw; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_theme_provenance_pk ON dw.theme_provenance USING btree (theme_sk, block, source);
 
 
 --
@@ -1308,6 +1602,22 @@ ALTER TABLE ONLY dw.bridge_subject_doctrine
 
 ALTER TABLE ONLY dw.bridge_subject_doctrine
     ADD CONSTRAINT bridge_subject_doctrine_subject_sk_fkey FOREIGN KEY (subject_sk) REFERENCES dw.dim_subject(subject_sk);
+
+
+--
+-- Name: bridge_subject_precedent bridge_subject_precedent_precedent_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.bridge_subject_precedent
+    ADD CONSTRAINT bridge_subject_precedent_precedent_sk_fkey FOREIGN KEY (precedent_sk) REFERENCES dw.dim_precedent(precedent_sk) ON DELETE CASCADE;
+
+
+--
+-- Name: bridge_subject_precedent bridge_subject_precedent_subject_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.bridge_subject_precedent
+    ADD CONSTRAINT bridge_subject_precedent_subject_sk_fkey FOREIGN KEY (subject_sk) REFERENCES dw.dim_subject(subject_sk);
 
 
 --
