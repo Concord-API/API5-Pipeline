@@ -23,6 +23,14 @@ CREATE INDEX IF NOT EXISTS idx_raw_doctrine_collected
     ON raw.doctrine_article (collected_at DESC);
 CREATE INDEX IF NOT EXISTS idx_raw_doctrine_payload
     ON raw.doctrine_article USING gin (payload jsonb_path_ops);
+CREATE TABLE IF NOT EXISTS raw.stj_precedent (
+    kind TEXT NOT NULL,
+    number INTEGER NOT NULL,
+    source_url TEXT NOT NULL,
+    collected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    payload JSONB NOT NULL,
+    PRIMARY KEY (kind, number)
+);
 """
 
 
