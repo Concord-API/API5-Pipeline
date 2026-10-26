@@ -26,7 +26,8 @@ HEADER = (
 
 def row(seq, kind, number, judged, status, question, thesis, body, subjects):
     return (
-        f'{seq},{kind},{number},,{judged},,{status},,"{question}","{thesis}",,,,,,,,,{body},"{subjects}",,'
+        f'{seq},{kind},{number},,{judged},,{status},,"{question}","{thesis}",'
+        f',,,,,,,,{body},"{subjects}",,'
     )
 
 
@@ -36,11 +37,12 @@ TEMAS = "\n".join([
         "O reajuste por faixa etária é válido.\nDesde que previsto.", "S2",
         "1156- DIREITO DO CONSUMIDOR, 7771- Contratos de Consumo, 6233- Planos de Saúde"),
     row(2, "Tema", 1016, "", "Afetado", "Planos coletivos.", "", "S2", "6233- Planos de Saúde"),
-    row(3, "Tema", 400, "2010-05-12", "Cancelado", "Tema cancelado.", "Tese antiga.", "S1", "6233- Planos de Saúde"),
-    row(4, "Controvérsia", 7, "", "Vinculada a Tema", "Controvérsia.", "Tese da controvérsia.", "S2",
+    row(3, "Tema", 400, "2010-05-12", "Cancelado", "Tema cancelado.", "Tese antiga.", "S1",
         "6233- Planos de Saúde"),
-    row(5, "Tema", 1100, "2023-02-01", "Acórdão Publicado", "Outro assunto.", "Tese de outro assunto.", "CE",
-        "9985- DIREITO ADMINISTRATIVO"),
+    row(4, "Controvérsia", 7, "", "Vinculada a Tema", "Controvérsia.",
+        "Tese da controvérsia.", "S2", "6233- Planos de Saúde"),
+    row(5, "Tema", 1100, "2023-02-01", "Acórdão Publicado", "Outro assunto.",
+        "Tese de outro assunto.", "CE", "9985- DIREITO ADMINISTRATIVO"),
 ]) + "\n"
 
 
@@ -85,7 +87,8 @@ def cursor(dw_ready):
         cur.execute("TRUNCATE dw.dim_subject RESTART IDENTITY CASCADE")
         cur.execute(
             "INSERT INTO dw.dim_subject (subject_name, subject_code) VALUES "
-            "('DIREITO DO CONSUMIDOR', 1156), ('Contratos de Consumo', 7771), ('Planos de Saúde', 6233), "
+            "('DIREITO DO CONSUMIDOR', 1156), ('Contratos de Consumo', 7771), "
+            "('Planos de Saúde', 6233), "
             "('DIREITO ADMINISTRATIVO', 9985)"
         )
         yield cur
@@ -95,7 +98,9 @@ def cursor(dw_ready):
 def test_stores_every_theme_of_the_file_in_raw(cursor):
     stored = harvest(cursor, lambda url: TEMAS)
 
-    cursor.execute("SELECT kind, number, source_url FROM raw.stj_precedent ORDER BY kind, number")
+    cursor.execute(
+        "SELECT kind, number, source_url FROM raw.stj_precedent ORDER BY kind, number"
+    )
     assert stored == 5
     assert cursor.fetchall()[0] == ("Controvérsia", 7, TEMAS_URL)
 
@@ -114,8 +119,8 @@ def test_loads_the_valid_theses_into_the_warehouse(cursor):
     dw_precedent.load(cursor, area_codes={1156, 9985})
 
     cursor.execute(
-        "SELECT precedent_kind, precedent_number, thesis, status, judged_at, judging_body, source_url "
-        "FROM dw.dim_precedent ORDER BY precedent_number"
+        "SELECT precedent_kind, precedent_number, thesis, status, judged_at, judging_body, "
+        "source_url FROM dw.dim_precedent ORDER BY precedent_number"
     )
     rows = cursor.fetchall()
     assert [r[1] for r in rows] == [952, 1100]
