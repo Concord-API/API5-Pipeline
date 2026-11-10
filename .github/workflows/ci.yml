@@ -176,6 +176,11 @@ jobs:
           start_api destino 5000 >/dev/null
           wait_for 5000
 
+      - name: Check the pipeline schema fixture
+        env:
+          DATABASE_URL: postgresql://ratio:ratio@localhost:5432/carga
+        run: python -m scripts.check_schema_drift "$DATABASE_URL"
+
       - name: Build the sample with the pipeline
         env:
           DATABASE_URL: postgresql://ratio:ratio@localhost:5432/carga
