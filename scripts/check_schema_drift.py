@@ -29,8 +29,11 @@ def schema_signature(schema):
     return sorted(
         line.strip()
         for line in lines
-        if line.startswith(("CREATE ", "ALTER TABLE ONLY"))
-        or line.strip().startswith("ADD CONSTRAINT")
+        if (
+            (line.startswith(("CREATE ", "ALTER TABLE ONLY"))
+             or line.strip().startswith("ADD CONSTRAINT"))
+            and "pg_attver" not in line
+        )
     )
 
 
