@@ -31,6 +31,13 @@ CREATE TABLE IF NOT EXISTS raw.stj_precedent (
     payload JSONB NOT NULL,
     PRIMARY KEY (kind, number)
 );
+CREATE TABLE IF NOT EXISTS raw.stj_ruling (
+    id TEXT PRIMARY KEY,
+    dataset TEXT NOT NULL,
+    source_url TEXT NOT NULL,
+    collected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    payload JSONB NOT NULL
+);
 """
 
 
