@@ -2,6 +2,7 @@ import io
 import json
 import time
 import zipfile
+from pathlib import Path
 
 import requests
 
@@ -66,23 +67,43 @@ def download(url, retries=5, sleep=time.sleep):
     raise requests.RequestException(f"o portal do STJ não respondeu: {url}")
 
 
+def _store(cursor, dataset, url, records, stored):
+    for record in records:
+        cursor.execute(
+            """
+            INSERT INTO raw.stj_ruling (id, dataset, source_url, payload)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE
+            SET dataset = EXCLUDED.dataset,
+                source_url = EXCLUDED.source_url,
+                payload = EXCLUDED.payload,
+                collected_at = now()
+            """,
+            (record["id"], dataset, url, json.dumps(record, ensure_ascii=False)),
+        )
+        stored.add(record["id"])
+
+
 def harvest(cursor, fetch=download, datasets=DATASETS):
     stored = set()
     for dataset in datasets:
         package = json.loads(fetch(PACKAGE_URL.format(dataset=dataset)))
         for name, url in ruling_files(package):
-            for record in parse_rulings(name, fetch(url)):
-                cursor.execute(
-                    """
-                    INSERT INTO raw.stj_ruling (id, dataset, source_url, payload)
-                    VALUES (%s, %s, %s, %s)
-                    ON CONFLICT (id) DO UPDATE
-                    SET dataset = EXCLUDED.dataset,
-                        source_url = EXCLUDED.source_url,
-                        payload = EXCLUDED.payload,
-                        collected_at = now()
-                    """,
-                    (record["id"], dataset, url, json.dumps(record, ensure_ascii=False)),
-                )
-                stored.add(record["id"])
+            _store(cursor, dataset, url, parse_rulings(name, fetch(url)), stored)
+    return len(stored)
+
+
+def harvest_folder(cursor, root, datasets=DATASETS):
+    root = Path(root)
+    if not root.is_dir():
+        raise FileNotFoundError(f"pasta não encontrada: {root}")
+    stored = set()
+    for dataset in datasets:
+        folder = root / dataset
+        if not folder.is_dir():
+            continue
+        for path in sorted(folder.iterdir()):
+            if path.suffix.lower() in {".json", ".zip"}:
+                records = parse_rulings(path.name, path.read_bytes())
+                _store(cursor, dataset, path.resolve().as_uri(), records, stored)
     return len(stored)
