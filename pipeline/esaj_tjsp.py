@@ -1,10 +1,20 @@
 import html
 import re
+import time
 from datetime import datetime
 from urllib.parse import urlencode, urljoin
 
+import requests
+
 BASE_URL = "https://esaj.tjsp.jus.br"
 FIRST_INSTANCE_LEVELS = ("First", "SpecialCourt")
+USER_AGENT = "Ratio-DW/1.0 (FATEC API-5)"
+DELAY_SECONDS = 2
+RETRIES = 5
+TIMEOUT_SECONDS = 60
+MAX_MOVEMENT_PAGES = 500
+MOVEMENT_PARAMETER = {"cpopg": "processo.codigo", "cposg": "cdProcesso"}
+OPERATION_FAILED = "Não foi possível executar esta operação"
 
 NOT_FOUND = "Não existem informações disponíveis para os parâmetros informados"
 BLOCK_MARKERS = (
@@ -71,6 +81,46 @@ class BlockedError(Exception):
 
 class UnexpectedPageError(Exception):
     pass
+
+
+class SiteUnavailableError(Exception):
+    pass
+
+
+def new_session():
+    session = requests.Session()
+    session.headers.update({"User-Agent": USER_AGENT})
+    return session
+
+
+class Client:
+    def __init__(self, session, sleep=time.sleep, delay=DELAY_SECONDS, retries=RETRIES):
+        self.session = session
+        self.sleep = sleep
+        self.delay = delay
+        self.retries = retries
+
+    def get(self, url, params=None):
+        for attempt in range(self.retries):
+            self.sleep(self.delay)
+            try:
+                response = self.session.get(url, params=params, timeout=TIMEOUT_SECONDS)
+            except requests.RequestException:
+                self.sleep(min(30, 3 * (attempt + 1)))
+                continue
+            if response.status_code == 403:
+                raise BlockedError("o e-SAJ recusou a requisição (403)")
+            if response.status_code == 429 or response.status_code >= 500:
+                self.sleep(min(30, 3 * (attempt + 1)))
+                continue
+            response.raise_for_status()
+            if not response.encoding or response.encoding.lower() == "iso-8859-1":
+                response.encoding = "utf-8"
+            text = response.text
+            if any(marker in text for marker in BLOCK_MARKERS):
+                raise BlockedError("o e-SAJ respondeu com uma verificação anti-robô")
+            return text
+        raise SiteUnavailableError(f"o e-SAJ não respondeu depois de {self.retries} tentativas")
 
 
 def format_case_number(digits):
@@ -220,3 +270,49 @@ def next_cursor(text):
 
 def listed_cases(text):
     return [urljoin(BASE_URL, html.unescape(href)) for href in LISTED_CASE.findall(text)]
+
+
+def fetch_movements(client, instance, code):
+    url = f"{BASE_URL}/{instance}/carregarMovimentacoesAjax.do"
+    movements = []
+    cursor = None
+    for _ in range(MAX_MOVEMENT_PAGES):
+        params = {MOVEMENT_PARAMETER[instance]: code}
+        if cursor:
+            params["cursor"] = cursor
+        text = client.get(url, params)
+        if OPERATION_FAILED in html.unescape(text):
+            raise UnexpectedPageError("o e-SAJ não carregou as movimentações do processo")
+        page = read_movements(text)
+        movements.extend(page)
+        cursor = next_cursor(text)
+        if not cursor or not page:
+            return movements
+    raise UnexpectedPageError("as movimentações do processo não terminaram")
+
+
+def fetch_case(client, case_number, court_level):
+    instance = instance_for(court_level)
+    url = search_url(case_number, court_level)
+    record = {"source": f"esaj_tjsp_{instance}", "source_url": url}
+    text = client.get(url)
+    kind = page_kind(text)
+    listed = None
+    if kind == "list":
+        links = listed_cases(text)
+        listed = len(links)
+        text = client.get(links[0])
+        kind = page_kind(text)
+    if kind in ("not_found", "sealed"):
+        return {**record, "status": kind, "payload": {}}
+    if kind != "case" or page_case_number(text) != case_number:
+        raise UnexpectedPageError("o e-SAJ devolveu a página de outro processo")
+    payload = {
+        "case_number": format_case_number(case_number),
+        "instance": instance,
+        **read_case(text, instance),
+        "movements": fetch_movements(client, instance, case_code(text, instance)),
+    }
+    if listed:
+        payload["listed_cases"] = listed
+    return {**record, "status": "found", "payload": payload}
