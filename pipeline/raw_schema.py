@@ -31,6 +31,17 @@ CREATE TABLE IF NOT EXISTS raw.stj_precedent (
     payload JSONB NOT NULL,
     PRIMARY KEY (kind, number)
 );
+CREATE TABLE IF NOT EXISTS raw.court_site_case (
+    court TEXT NOT NULL,
+    case_number TEXT NOT NULL,
+    court_level TEXT NOT NULL,
+    source TEXT NOT NULL,
+    source_url TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('found', 'not_found', 'sealed')),
+    collected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    payload JSONB NOT NULL,
+    PRIMARY KEY (court, case_number)
+);
 """
 
 
