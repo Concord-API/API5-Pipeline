@@ -1,14 +1,35 @@
 from pipeline.stj_precedents import from_row, is_valid, tema_link
 
+OUT_OF_SCOPE_AREAS = ("864", "11428", "10739")
+
 
 def area_codes(tpu):
     return {int(code) for code in tpu.get("areas", {})}
 
 
-def load(cursor, area_codes):
+def out_of_scope_codes(tpu):
+    areas = tpu.get("areas", {})
+    return {
+        int(code)
+        for area in OUT_OF_SCOPE_AREAS
+        if area in areas
+        for code in areas[area]["codigos"]
+    }
+
+
+def in_scope(tema, out_of_scope):
+    codes = tema["subject_codes"]
+    return not codes or any(code not in out_of_scope for code in codes)
+
+
+def load(cursor, area_codes, out_of_scope=frozenset()):
     cursor.execute("SELECT payload, collected_at FROM raw.stj_precedent")
     temas = [(from_row(payload), collected_at) for payload, collected_at in cursor.fetchall()]
-    valid = [(tema, collected_at) for tema, collected_at in temas if tema and is_valid(tema)]
+    valid = [
+        (tema, collected_at)
+        for tema, collected_at in temas
+        if tema and is_valid(tema) and in_scope(tema, out_of_scope)
+    ]
 
     cursor.execute("DELETE FROM dw.bridge_subject_precedent")
     cursor.execute(
