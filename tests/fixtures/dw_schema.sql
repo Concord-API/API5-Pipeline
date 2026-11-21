@@ -541,7 +541,12 @@ CREATE TABLE dw.dim_precedent (
     judging_body text,
     source text DEFAULT 'stj_precedentes'::text NOT NULL,
     source_url text NOT NULL,
-    extracted_at timestamp with time zone NOT NULL
+    extracted_at timestamp with time zone NOT NULL,
+    precedent_type text,
+    status_date date,
+    suspends_cases boolean,
+    leading_cases text[] DEFAULT '{}'::text[] NOT NULL,
+    CONSTRAINT dim_precedent_precedent_type_check CHECK ((precedent_type = ANY (ARRAY['sumula'::text, 'tema_repetitivo'::text, 'irdr'::text, 'iac'::text, 'repercussao_geral'::text])))
 );
 
 
@@ -665,6 +670,34 @@ CREATE TABLE dw.strength_config (
     CONSTRAINT strength_config_id_check CHECK ((id = 1)),
     CONSTRAINT strength_config_min_judged_for_percentage_check CHECK ((min_judged_for_percentage >= 1))
 );
+
+
+--
+-- Name: theme_appeal_by_instance; Type: MATERIALIZED VIEW; Schema: dw; Owner: -
+--
+
+CREATE MATERIALIZED VIEW dw.theme_appeal_by_instance AS
+ SELECT bts.theme_sk,
+        CASE
+            WHEN (c.court_code = ANY (ARRAY['STJ'::text, 'STF'::text])) THEN 'superior'::text
+            ELSE 'state'::text
+        END AS instance,
+    count(DISTINCT ccr.case_sk) AS judged_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'Granted'::text)) AS upheld_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'PartiallyGranted'::text)) AS partially_upheld_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'Denied'::text)) AS rejected_count
+   FROM ((((dw.bridge_theme_subject bts
+     JOIN dw.bridge_case_subject bcs ON ((bcs.subject_sk = bts.subject_sk)))
+     JOIN dw.case_current_result ccr ON ((ccr.case_sk = bcs.case_sk)))
+     JOIN dw.dim_court c ON ((c.court_sk = ccr.court_sk)))
+     JOIN dw.dim_decision_outcome o ON ((o.outcome_sk = ccr.outcome_sk)))
+  WHERE (ccr.polarity_reference = 'pretensao_recorrente'::text)
+  GROUP BY bts.theme_sk,
+        CASE
+            WHEN (c.court_code = ANY (ARRAY['STJ'::text, 'STF'::text])) THEN 'superior'::text
+            ELSE 'state'::text
+        END
+  WITH NO DATA;
 
 
 --
@@ -1510,6 +1543,13 @@ CREATE INDEX idx_fact_case_event_movement ON dw.fact_case_event USING btree (mov
 
 
 --
+-- Name: idx_theme_appeal_by_instance_pk; Type: INDEX; Schema: dw; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_theme_appeal_by_instance_pk ON dw.theme_appeal_by_instance USING btree (theme_sk, instance);
+
+
+--
 -- Name: idx_theme_by_court_pk; Type: INDEX; Schema: dw; Owner: -
 --
 
@@ -1714,26 +1754,6 @@ ALTER TABLE ONLY dw.fact_case_event
 
 ALTER TABLE ONLY dw.theme_narrative
     ADD CONSTRAINT theme_narrative_theme_sk_fkey FOREIGN KEY (theme_sk) REFERENCES dw.dim_theme(theme_sk);
-
-
-CREATE MATERIALIZED VIEW dw.theme_appeal_by_instance AS
-SELECT
-    bts.theme_sk,
-    CASE WHEN c.court_code IN ('STJ', 'STF') THEN 'superior' ELSE 'state' END AS instance,
-    count(DISTINCT ccr.case_sk) AS judged_count,
-    count(DISTINCT ccr.case_sk) FILTER (WHERE o.outcome_code = 'Granted') AS upheld_count,
-    count(DISTINCT ccr.case_sk) FILTER (WHERE o.outcome_code = 'PartiallyGranted') AS partially_upheld_count,
-    count(DISTINCT ccr.case_sk) FILTER (WHERE o.outcome_code = 'Denied') AS rejected_count
-FROM dw.bridge_theme_subject bts
-JOIN dw.bridge_case_subject bcs ON bcs.subject_sk = bts.subject_sk
-JOIN dw.case_current_result ccr ON ccr.case_sk = bcs.case_sk
-JOIN dw.dim_court c ON c.court_sk = ccr.court_sk
-JOIN dw.dim_decision_outcome o ON o.outcome_sk = ccr.outcome_sk
-WHERE ccr.polarity_reference = 'pretensao_recorrente'
-GROUP BY bts.theme_sk, CASE WHEN c.court_code IN ('STJ', 'STF') THEN 'superior' ELSE 'state' END
-WITH NO DATA;
-
-CREATE UNIQUE INDEX idx_theme_appeal_by_instance_pk ON dw.theme_appeal_by_instance USING btree (theme_sk, instance);
 
 
 --
