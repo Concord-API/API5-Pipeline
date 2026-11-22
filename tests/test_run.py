@@ -358,3 +358,39 @@ def test_run_loads_the_stj_rulings_into_the_load_file(postgres_container, dw_rea
             ("000819199", "AgInt no REsp 1997135",
              "PROCESSUAL CIVIL. AGRAVO INTERNO NO RECURSO ESPECIAL."),
         ]
+
+
+def insert_raw_ruling_of_a_sample_case(cursor):
+    payload = {
+        "id": "000900001",
+        "numeroProcesso": "0000001-00.2024.8.26.0100",
+        "nomeOrgaoJulgador": "TERCEIRA TURMA",
+        "ementa": "PROCESSUAL CIVIL. RECURSO ESPECIAL.",
+        "dataDecisao": "20250110",
+    }
+    cursor.execute(
+        "INSERT INTO raw.stj_ruling (id, dataset, source_url, payload) VALUES (%s, %s, %s, %s)",
+        (
+            "000900001",
+            "espelhos-de-acordaos-terceira-turma",
+            "https://dadosabertos.web.stj.jus.br/20250131.json",
+            json.dumps(payload),
+        ),
+    )
+
+
+def test_run_ties_the_rulings_to_the_themes(postgres_container, dw_ready, tmp_path):
+    content = run_once(
+        postgres_container,
+        dw_ready,
+        tmp_path,
+        extra_precedents=[insert_raw_ruling_of_a_sample_case],
+    )
+
+    assert "COPY dw.bridge_theme_ruling" in content
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT t.theme_name, r.source_id, b.link_method FROM dw.bridge_theme_ruling b "
+            "JOIN dw.dim_theme t USING (theme_sk) JOIN dw.dim_ruling r USING (ruling_sk)"
+        )
+        assert cursor.fetchall() == [("Contratos", "000900001", "cnj_exact")]
