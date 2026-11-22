@@ -245,6 +245,40 @@ CREATE TABLE dw.bridge_theme_subject (
 
 
 --
+-- Name: case_site_detail; Type: TABLE; Schema: dw; Owner: -
+--
+
+CREATE TABLE dw.case_site_detail (
+    case_sk bigint NOT NULL,
+    status text NOT NULL,
+    case_class text,
+    subjects text[] DEFAULT '{}'::text[] NOT NULL,
+    judging_body text,
+    judge text,
+    filed_at date,
+    decision_date date,
+    decision_result text,
+    situation text,
+    source text NOT NULL,
+    source_url text NOT NULL,
+    extracted_at timestamp with time zone NOT NULL,
+    CONSTRAINT case_site_detail_status_check CHECK ((status = ANY (ARRAY['found'::text, 'not_found'::text, 'sealed'::text])))
+);
+
+
+--
+-- Name: case_site_movement; Type: TABLE; Schema: dw; Owner: -
+--
+
+CREATE TABLE dw.case_site_movement (
+    case_sk bigint NOT NULL,
+    seq integer NOT NULL,
+    moved_at date NOT NULL,
+    description text NOT NULL
+);
+
+
+--
 -- Name: dim_case; Type: TABLE; Schema: dw; Owner: -
 --
 
@@ -1183,6 +1217,22 @@ ALTER TABLE ONLY dw.dim_case_class
 
 
 --
+-- Name: case_site_detail case_site_detail_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.case_site_detail
+    ADD CONSTRAINT case_site_detail_pkey PRIMARY KEY (case_sk);
+
+
+--
+-- Name: case_site_movement case_site_movement_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.case_site_movement
+    ADD CONSTRAINT case_site_movement_pkey PRIMARY KEY (case_sk, seq);
+
+
+--
 -- Name: dim_case_class dim_case_class_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
 --
 
@@ -1634,6 +1684,22 @@ ALTER TABLE ONLY dw.bridge_theme_subject
 
 ALTER TABLE ONLY dw.bridge_theme_subject
     ADD CONSTRAINT bridge_theme_subject_theme_sk_fkey FOREIGN KEY (theme_sk) REFERENCES dw.dim_theme(theme_sk) ON DELETE CASCADE;
+
+
+--
+-- Name: case_site_detail case_site_detail_case_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.case_site_detail
+    ADD CONSTRAINT case_site_detail_case_sk_fkey FOREIGN KEY (case_sk) REFERENCES dw.dim_case(case_sk);
+
+
+--
+-- Name: case_site_movement case_site_movement_case_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.case_site_movement
+    ADD CONSTRAINT case_site_movement_case_sk_fkey FOREIGN KEY (case_sk) REFERENCES dw.case_site_detail(case_sk) ON DELETE CASCADE;
 
 
 --
