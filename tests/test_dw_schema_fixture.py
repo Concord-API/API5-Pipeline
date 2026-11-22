@@ -6,6 +6,7 @@ MIGRATED_RELATIONS = {
     "dim_court", "dim_judging_body", "dim_case_class", "dim_case", "dim_date",
     "dim_decision_outcome", "dim_movement", "dim_subject", "dim_theme", "dim_doctrine",
     "fact_case_event", "bridge_case_subject", "bridge_theme_subject", "bridge_subject_doctrine",
+    "bridge_theme_precedent",
     "strength_config", "search_synonym", "theme_narrative",
     "case_current_result", "theme_summary", "theme_strength", "data_provenance",
     "theme_provenance",

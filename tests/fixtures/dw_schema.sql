@@ -235,6 +235,20 @@ CREATE TABLE dw.bridge_subject_precedent (
 
 
 --
+-- Name: bridge_theme_precedent; Type: TABLE; Schema: dw; Owner: -
+--
+
+CREATE TABLE dw.bridge_theme_precedent (
+    theme_sk bigint NOT NULL,
+    precedent_sk bigint NOT NULL,
+    link_method text NOT NULL,
+    similarity real NOT NULL,
+    embedding_model text NOT NULL,
+    CONSTRAINT bridge_theme_precedent_similarity_check CHECK (((similarity >= (0)::double precision) AND (similarity <= (1)::double precision)))
+);
+
+
+--
 -- Name: bridge_theme_subject; Type: TABLE; Schema: dw; Owner: -
 --
 
@@ -1192,6 +1206,14 @@ ALTER TABLE ONLY dw.bridge_subject_precedent
 
 
 --
+-- Name: bridge_theme_precedent bridge_theme_precedent_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.bridge_theme_precedent
+    ADD CONSTRAINT bridge_theme_precedent_pkey PRIMARY KEY (theme_sk, precedent_sk);
+
+
+--
 -- Name: bridge_theme_subject bridge_theme_subject_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
 --
 
@@ -1431,6 +1453,13 @@ CREATE INDEX idx_bridge_case_subject_subject ON dw.bridge_case_subject USING btr
 
 
 --
+-- Name: idx_bridge_theme_precedent_precedent; Type: INDEX; Schema: dw; Owner: -
+--
+
+CREATE INDEX idx_bridge_theme_precedent_precedent ON dw.bridge_theme_precedent USING btree (precedent_sk);
+
+
+--
 -- Name: idx_bridge_subject_precedent_precedent; Type: INDEX; Schema: dw; Owner: -
 --
 
@@ -1658,6 +1687,22 @@ ALTER TABLE ONLY dw.bridge_subject_precedent
 
 ALTER TABLE ONLY dw.bridge_subject_precedent
     ADD CONSTRAINT bridge_subject_precedent_subject_sk_fkey FOREIGN KEY (subject_sk) REFERENCES dw.dim_subject(subject_sk);
+
+
+--
+-- Name: bridge_theme_precedent bridge_theme_precedent_precedent_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.bridge_theme_precedent
+    ADD CONSTRAINT bridge_theme_precedent_precedent_sk_fkey FOREIGN KEY (precedent_sk) REFERENCES dw.dim_precedent(precedent_sk) ON DELETE CASCADE;
+
+
+--
+-- Name: bridge_theme_precedent bridge_theme_precedent_theme_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.bridge_theme_precedent
+    ADD CONSTRAINT bridge_theme_precedent_theme_sk_fkey FOREIGN KEY (theme_sk) REFERENCES dw.dim_theme(theme_sk) ON DELETE CASCADE;
 
 
 --
