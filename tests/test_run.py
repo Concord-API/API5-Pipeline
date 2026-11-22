@@ -353,3 +353,18 @@ def test_run_leaves_the_labour_precedents_out(postgres_container, dw_ready, tmp_
     with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
         cursor.execute("SELECT precedent_number FROM dw.dim_precedent ORDER BY precedent_number")
         assert [number for (number,) in cursor.fetchall()] == [952]
+
+
+def test_run_ties_the_stj_theses_to_the_themes(postgres_container, dw_ready, tmp_path):
+    content = run_once(
+        postgres_container, dw_ready, tmp_path, extra_precedents=[insert_raw_precedent]
+    )
+
+    assert "COPY dw.bridge_theme_precedent" in content
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT t.theme_name, p.precedent_number, b.link_method "
+            "FROM dw.bridge_theme_precedent b JOIN dw.dim_theme t USING (theme_sk) "
+            "JOIN dw.dim_precedent p USING (precedent_sk)"
+        )
+        assert cursor.fetchall() == [("Contratos", 952, METHOD)]
