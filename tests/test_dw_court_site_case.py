@@ -150,3 +150,17 @@ def test_load_keeps_only_the_status_of_not_found_and_sealed_cases(cursor):
     assert detail(cursor, SEALED) == ("sealed", *empty)
     assert movements(cursor, NOT_FOUND) == []
     assert movements(cursor, SEALED) == []
+
+
+def test_load_again_replaces_the_site_data_of_every_case(cursor):
+    collect(cursor, FOUND, "found", FOUND_PAYLOAD)
+    collect(cursor, SEALED, "found", FOUND_PAYLOAD, court_level="First")
+    dw_court_site_case.load(cursor)
+    recollected = {**FOUND_PAYLOAD, "movements": [{"date": "2024-06-01", "description": "Baixa"}]}
+    collect(cursor, FOUND, "found", recollected)
+    cursor.execute("DELETE FROM raw.court_site_case WHERE case_number = %s", (SEALED,))
+
+    dw_court_site_case.load(cursor)
+
+    assert movements(cursor, FOUND) == [(1, date(2024, 6, 1), "Baixa")]
+    assert detail(cursor, SEALED) is None
