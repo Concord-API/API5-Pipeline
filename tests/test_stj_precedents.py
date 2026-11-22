@@ -132,6 +132,15 @@ def test_loads_the_valid_theses_into_the_warehouse(cursor):
     assert rows[0][6] == tema_link(952)
 
 
+def test_records_the_loaded_stj_themes_as_repetitive_themes(cursor):
+    harvest(cursor, lambda url: TEMAS)
+
+    dw_precedent.load(cursor, area_codes={1156, 9985})
+
+    cursor.execute("SELECT DISTINCT precedent_type FROM dw.dim_precedent")
+    assert cursor.fetchall() == [("tema_repetitivo",)]
+
+
 def test_links_a_thesis_to_its_subjects_but_not_to_the_area(cursor):
     harvest(cursor, lambda url: TEMAS)
 
