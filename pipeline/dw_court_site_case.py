@@ -45,11 +45,11 @@ def load(cursor):
     cursor.execute(COLLECTED_SQL)
     collected = cursor.fetchall()
     counts = Counter({status: 0 for status in STATUSES})
+    cursor.execute("DELETE FROM dw.case_site_detail")
     for row in collected:
         case_sk, status, payload = row[0], row[1], row[-1]
         if status != "found":
             payload = {}
-        cursor.execute("DELETE FROM dw.case_site_detail WHERE case_sk = %s", (case_sk,))
         cursor.execute(DETAIL_SQL, _detail(*row[:-1], payload))
         for seq, movement in enumerate(payload.get("movements") or [], start=1):
             cursor.execute(MOVEMENT_SQL, (case_sk, seq, movement["date"], movement["description"]))
