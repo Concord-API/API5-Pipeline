@@ -110,7 +110,10 @@ def test_keeps_only_the_closest_precedents_of_each_theme():
 
 def test_link_again_replaces_the_previous_ties(cursor):
     link(cursor, fake_encoder)
-    cursor.execute("UPDATE dw.dim_theme SET theme_name = %s WHERE theme_key = 1", (CIRURGIA,))
+    cursor.execute(
+        "UPDATE dw.dim_precedent SET question = %s, thesis = %s WHERE precedent_number = 952",
+        ("Validade da cláusula.", "A cláusula do contrato é válida."),
+    )
 
     assert link(cursor, fake_encoder) == 0
 
