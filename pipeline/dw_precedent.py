@@ -42,12 +42,13 @@ def load(cursor, area_codes, out_of_scope=frozenset()):
             """
             INSERT INTO dw.dim_precedent
                 (precedent_kind, precedent_number, thesis, question, status, judged_at,
-                 judging_body, source_url, extracted_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 judging_body, source_url, extracted_at, precedent_type)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'tema_repetitivo')
             ON CONFLICT (precedent_kind, precedent_number) DO UPDATE
             SET thesis = EXCLUDED.thesis, question = EXCLUDED.question, status = EXCLUDED.status,
                 judged_at = EXCLUDED.judged_at, judging_body = EXCLUDED.judging_body,
-                source_url = EXCLUDED.source_url, extracted_at = EXCLUDED.extracted_at
+                source_url = EXCLUDED.source_url, extracted_at = EXCLUDED.extracted_at,
+                precedent_type = EXCLUDED.precedent_type
             """,
             (
                 tema["kind"], tema["number"], tema["thesis"], tema["question"], tema["status"],
