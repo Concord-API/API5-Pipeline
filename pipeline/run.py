@@ -4,6 +4,7 @@ from pipeline import (
     doctrine_link,
     dw_case,
     dw_case_links,
+    dw_court_site_case,
     dw_date,
     dw_doctrine,
     dw_fact,
@@ -81,6 +82,7 @@ def run(cursor, dsn, tpu, groups, output_path, runner=None, encoder=local_encode
     transform_all(cursor, tpu)
     load_dimensions(cursor, tpu, today.year + 1)
     dw_precedent.load(cursor, dw_precedent.area_codes(tpu))
+    dw_court_site_case.load(cursor)
     doctrine_link.link(cursor, encoder)
     load_themes(cursor, groups)
     strength_config.seed(cursor, today.year)
