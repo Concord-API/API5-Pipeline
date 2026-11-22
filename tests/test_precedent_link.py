@@ -106,3 +106,12 @@ def test_keeps_only_the_closest_precedents_of_each_theme():
     result = links(themes, precedents, fake_encoder, top_k=1)
 
     assert [(theme, precedent) for theme, precedent, *_ in result] == [(1, 10)]
+
+
+def test_link_again_replaces_the_previous_ties(cursor):
+    link(cursor, fake_encoder)
+    cursor.execute("UPDATE dw.dim_theme SET theme_name = %s WHERE theme_key = 1", (CIRURGIA,))
+
+    assert link(cursor, fake_encoder) == 0
+
+    assert stored_links(cursor) == []
