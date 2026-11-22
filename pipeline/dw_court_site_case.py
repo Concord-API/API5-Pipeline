@@ -15,6 +15,11 @@ INSERT INTO dw.case_site_detail
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 """
 
+MOVEMENT_SQL = """
+INSERT INTO dw.case_site_movement (case_sk, seq, moved_at, description)
+VALUES (%s, %s, %s, %s)
+"""
+
 STATUSES = ("found", "not_found", "sealed")
 
 
@@ -40,8 +45,11 @@ def load(cursor):
     cursor.execute(COLLECTED_SQL)
     collected = cursor.fetchall()
     counts = Counter({status: 0 for status in STATUSES})
-    for case_sk, status, source, source_url, collected_at, payload in collected:
+    for row in collected:
+        case_sk, status, payload = row[0], row[1], row[-1]
         cursor.execute("DELETE FROM dw.case_site_detail WHERE case_sk = %s", (case_sk,))
-        cursor.execute(DETAIL_SQL, _detail(case_sk, status, source, source_url, collected_at, payload))
+        cursor.execute(DETAIL_SQL, _detail(*row))
+        for seq, movement in enumerate(payload.get("movements") or [], start=1):
+            cursor.execute(MOVEMENT_SQL, (case_sk, seq, movement["date"], movement["description"]))
         counts[status] += 1
     return dict(counts)
