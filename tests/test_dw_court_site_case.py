@@ -135,3 +135,18 @@ def test_load_keeps_the_public_movements_in_the_site_order(cursor):
         (2, date(2024, 5, 2), "Julgado"),
         (3, date(2024, 2, 1), "Distribuído"),
     ]
+
+
+def test_load_keeps_only_the_status_of_not_found_and_sealed_cases(cursor):
+    collect(cursor, FOUND, "found", FOUND_PAYLOAD)
+    collect(cursor, NOT_FOUND, "not_found", {}, court_level="First")
+    collect(cursor, SEALED, "sealed", FOUND_PAYLOAD, court_level="First")
+
+    counts = dw_court_site_case.load(cursor)
+
+    assert counts == {"found": 1, "not_found": 1, "sealed": 1}
+    empty = (None, [], None, None, None, None, None, None, "esaj_tjsp_cposg", SOURCE_URL)
+    assert detail(cursor, NOT_FOUND) == ("not_found", *empty)
+    assert detail(cursor, SEALED) == ("sealed", *empty)
+    assert movements(cursor, NOT_FOUND) == []
+    assert movements(cursor, SEALED) == []
