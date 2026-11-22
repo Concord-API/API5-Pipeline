@@ -17,7 +17,7 @@ def precedent_text(question, thesis):
     return " ".join(part for part in (question, thesis) if part)
 
 
-def links(themes, precedents, encoder, threshold=THRESHOLD):
+def links(themes, precedents, encoder, threshold=THRESHOLD, top_k=TOP_K):
     if not themes or not precedents:
         return []
     theme_vectors = np.asarray(encoder([name for _, name in themes]), dtype=np.float32)
@@ -26,7 +26,8 @@ def links(themes, precedents, encoder, threshold=THRESHOLD):
     found = []
     for row, (theme_sk, name) in enumerate(themes):
         tokens = distinctive_tokens(name)
-        for column, (precedent_sk, text) in enumerate(precedents):
+        for column in np.argsort(-similarities[row], kind="stable")[:top_k]:
+            precedent_sk, text = precedents[column]
             score = float(similarities[row, column])
             if score >= threshold and lexical_match(tokens, text):
                 found.append((theme_sk, precedent_sk, METHOD, score, MODEL))
