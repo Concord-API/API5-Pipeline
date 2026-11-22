@@ -97,3 +97,12 @@ def test_link_stores_the_ties_of_every_theme(cursor):
     assert link(cursor, fake_encoder) == 1
 
     assert stored_links(cursor) == [(1, 952, METHOD, MODEL)]
+
+
+def test_keeps_only_the_closest_precedents_of_each_theme():
+    themes = [(1, REAJUSTE)]
+    precedents = [(10, TEMA_952), (11, TEMA_1016)]
+
+    result = links(themes, precedents, fake_encoder, top_k=1)
+
+    assert [(theme, precedent) for theme, precedent, *_ in result] == [(1, 10)]
