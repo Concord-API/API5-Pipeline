@@ -13,6 +13,7 @@ from pipeline import (
     dw_subject,
     integrity,
     load_file,
+    precedent_link,
     search_synonym,
     staging,
     strength_config,
@@ -85,6 +86,7 @@ def run(cursor, dsn, tpu, groups, output_path, runner=None, encoder=local_encode
     )
     doctrine_link.link(cursor, encoder)
     load_themes(cursor, groups)
+    precedent_link.link(cursor, encoder)
     strength_config.seed(cursor, today.year)
     search_synonym.seed(cursor, search_synonym.load())
     theme_narrative.generate(cursor, today)
