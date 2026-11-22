@@ -16,10 +16,10 @@ def _load_rules():
     with open(RULES_PATH, encoding="utf-8") as handle:
         data = json.load(handle)
     exact = {name.strip(): area for name, area in data["exact_area"].items()}
-    return data["area_rules"], exact
+    return data["area_rules"], exact, data["tpu_area_fallback"]
 
 
-AREA_RULES, EXACT_AREA = _load_rules()
+AREA_RULES, EXACT_AREA, TPU_AREA_FALLBACK = _load_rules()
 
 
 def classify_area(name):
