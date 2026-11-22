@@ -123,3 +123,15 @@ def test_load_ignores_a_collected_case_missing_from_the_case_dimension(cursor):
     assert dw_court_site_case.load(cursor) == {"found": 0, "not_found": 0, "sealed": 0}
     cursor.execute("SELECT count(*) FROM dw.case_site_detail")
     assert cursor.fetchone()[0] == 0
+
+
+def test_load_keeps_the_public_movements_in_the_site_order(cursor):
+    collect(cursor, FOUND, "found", FOUND_PAYLOAD)
+
+    dw_court_site_case.load(cursor)
+
+    assert movements(cursor, FOUND) == [
+        (1, date(2024, 5, 10), "Trânsito em Julgado"),
+        (2, date(2024, 5, 2), "Julgado"),
+        (3, date(2024, 2, 1), "Distribuído"),
+    ]
