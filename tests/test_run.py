@@ -115,7 +115,9 @@ def same_vector_encoder(texts):
     return [[1.0, 0.0] for _ in texts]
 
 
-def run_once(postgres_container, dw_ready, tmp_path, extra_raw=(), extra_precedents=()):
+def run_once(
+    postgres_container, dw_ready, tmp_path, extra_raw=(), extra_precedents=(), site_cases=()
+):
     tpu = load_tpu(FIXTURE_TPU)
     local_dsn = (
         f"postgresql://{postgres_container.username}:{postgres_container.password}"
@@ -150,6 +152,9 @@ def run_once(postgres_container, dw_ready, tmp_path, extra_raw=(), extra_precede
         insert_raw_doctrine(cursor)
         cursor.execute("TRUNCATE raw.stj_precedent")
         for insert in extra_precedents:
+            insert(cursor)
+        cursor.execute("TRUNCATE raw.court_site_case")
+        for insert in site_cases:
             insert(cursor)
 
         output_path = tmp_path / "load.sql"
@@ -323,3 +328,36 @@ def test_run_links_the_stj_theses_to_the_theme_subjects(postgres_container, dw_r
             "JOIN dw.dim_precedent p USING (precedent_sk) JOIN dw.dim_subject s USING (subject_sk)"
         )
         assert cursor.fetchall() == [(952, "Contratos")]
+
+
+def insert_site_case(cursor):
+    payload = {
+        "case_class": "Procedimento Comum Cível",
+        "subjects": ["Contratos"],
+        "judging_body": "1ª Vara Cível",
+        "judge": "Juiz Exemplo",
+        "filed_at": "2024-01-10",
+        "movements": [{"date": "2025-06-15", "description": "Julgada procedente a ação"}],
+    }
+    cursor.execute(
+        "INSERT INTO raw.court_site_case "
+        "(court, case_number, court_level, source, source_url, status, payload) "
+        "VALUES ('TJSP', '00000010020248260100', 'First', 'esaj_tjsp_cpopg', "
+        "'https://esaj.tjsp.jus.br/cpopg/search.do', 'found', %s)",
+        (json.dumps(payload),),
+    )
+
+
+def test_run_loads_the_cases_collected_from_the_court_site(postgres_container, dw_ready, tmp_path):
+    content = run_once(postgres_container, dw_ready, tmp_path, site_cases=[insert_site_case])
+
+    assert "COPY dw.case_site_detail" in content
+    assert "COPY dw.case_site_movement" in content
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT c.case_number, d.judging_body, m.description FROM dw.case_site_detail d "
+            "JOIN dw.dim_case c USING (case_sk) JOIN dw.case_site_movement m USING (case_sk)"
+        )
+        assert cursor.fetchall() == [
+            ("00000010020248260100", "1ª Vara Cível", "Julgada procedente a ação")
+        ]
