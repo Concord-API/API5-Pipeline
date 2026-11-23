@@ -1,5 +1,6 @@
 import json
 import os
+import unicodedata
 
 from pipeline.theme_area import classify_area
 
@@ -11,38 +12,40 @@ def load_groups(path=DEFAULT_GROUPS_PATH):
         return json.load(handle)
 
 
-def build(subjects, groups):
-    name_to_sk = dict(subjects)
-    consumed = set()
-    themes = []
+def same_name(name):
+    folded = unicodedata.normalize("NFD", " ".join(name.split()).casefold())
+    return "".join(char for char in folded if unicodedata.category(char) != "Mn")
 
+
+def build(subjects, groups):
+    by_name = {}
+    for name, sk in subjects:
+        clean = name.strip()
+        entry = by_name.setdefault(same_name(clean), {"name": clean, "sks": []})
+        entry["sks"].append(sk)
+
+    themes = {}
     for group in groups:
-        sks = [name_to_sk[name] for name in group["aliases"] if name in name_to_sk]
-        consumed.update(name for name in group["aliases"] if name in name_to_sk)
+        sks = []
+        for alias in group["aliases"]:
+            entry = by_name.pop(same_name(alias), None)
+            if entry is not None:
+                sks.extend(entry["sks"])
         if sks:
-            themes.append({
+            themes[same_name(group["theme_name"])] = {
                 "theme_name": group["theme_name"],
                 "subject_area": group["subject_area"],
                 "subject_sks": sks,
-            })
+            }
 
-    for name, sk in subjects:
-        if name in consumed:
+    for key, entry in by_name.items():
+        if key in themes:
+            themes[key]["subject_sks"].extend(entry["sks"])
             continue
-        clean = name.strip()
-        themes.append({
-            "theme_name": clean,
-            "subject_area": classify_area(clean),
-            "subject_sks": [sk],
-        })
+        themes[key] = {
+            "theme_name": entry["name"],
+            "subject_area": classify_area(entry["name"]),
+            "subject_sks": entry["sks"],
+        }
 
-    seen = {}
-    for theme in themes:
-        base = theme["theme_name"]
-        if base in seen:
-            seen[base] += 1
-            theme["theme_name"] = f"{base} ({seen[base]})"
-        else:
-            seen[base] = 1
-
-    return themes
+    return list(themes.values())
