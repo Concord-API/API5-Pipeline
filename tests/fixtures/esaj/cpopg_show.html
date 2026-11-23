@@ -1,0 +1,74 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Portal de Serviços e-SAJ</title>
+<script language="javascript" type="text/JavaScript">
+    var captcha = $.saj.getUrlParameter('uuidCaptcha');
+    $.saj = $.saj || {};
+    $.saj.movimentacoes = {
+        codigoProcesso: 'B00001AAA0000',
+        labelBotaoExibir: 'Exibir movimentações'
+    };
+    $.saj.acessoRecurso = {
+        popupSenha: {
+            mostrar: 'false' == 'true',
+            titulo: 'Senha do processo'
+        }
+    };
+</script>
+</head>
+<body>
+<div id="containerDadosPrincipaisProcesso" class="container">
+    <span id="numeroProcesso" class="unj-larger-1">
+        1000001-23.2024.8.26.0100
+    </span>
+    <span id="labelSituacaoProcesso" class="unj-tag">Em andamento</span>
+    <span id="labelClasseProcesso" class="unj-label">Classe</span>
+    <div class="lh-1-1 line-clamp__2"><span id="classeProcesso" title="Procedimento Comum Cível">Procedimento Comum Cível</span></div>
+    <span id="labelAssuntoProcesso" class="unj-label">Assunto</span>
+    <div class="lh-1-1 line-clamp__2"> <span id="assuntoProcesso" title="Inclusão Indevida em Cadastro de Inadimplentes">Inclusão Indevida em Cadastro de Inadimplentes</span></div>
+    <span id="labelForoProcesso" class="unj-label">Foro</span>
+    <div class="lh-1-1 line-clamp__2"> <span id="foroProcesso" title="Foro Central Cível">Foro Central Cível</span></div>
+    <span id="labelVaraProcesso" class="unj-label">Vara</span>
+    <div class="lh-1-1 line-clamp__2"><span id="varaProcesso" title="2ª Vara Cível">2ª Vara Cível</span></div>
+    <span id="labelJuizProcesso" class="unj-label">Juiz</span>
+    <div class="line-clamp__2"> <span id="juizProcesso" title="MAGISTRADA FICTÍCIA DE TESTE">MAGISTRADA FICTÍCIA DE TESTE</span> </div>
+    <span id="labelDistribuicaoProcesso" class="unj-label">Distribuição </span>
+    <div id="dataHoraDistribuicaoProcesso">11/08/2024 às 12:31 - Livre</div>
+    <span id="labelAreaProcesso" class="unj-label">Área</span>
+    <div id="areaProcesso" class="lh-1-1 line-clamp__2"> <span title="Cível">Cível</span></div>
+    <span id="lavelValorAcaoProcesso" class="unj-label">Valor da ação</span>
+    <div id="valorAcaoProcesso">R$         18.696,19</div>
+</div>
+<table id="tablePartesPrincipais" style="margin-left:15px; margin-top:1px;">
+    <tr class="fundoClaro">
+        <td valign="top" width="141" style="padding-bottom: 5px">
+            <span class="mensagemExibindo tipoDeParticipacao">Reqte&nbsp;</span>
+        </td>
+        <td class="nomeParteEAdvogado" width="*" align="left" style="padding-bottom: 5px">
+            PARTE AUTORA FICTÍCIA
+            <br />
+            <span class="mensagemExibindo">Advogado:&nbsp;</span>
+            ADVOGADA FICTÍCIA
+        </td>
+    </tr>
+    <tr class="fundoClaro">
+        <td valign="top" width="141" style="padding-bottom: 5px">
+            <span class="mensagemExibindo tipoDeParticipacao">Reqdo&nbsp;</span>
+        </td>
+        <td class="nomeParteEAdvogado" width="*" align="left" style="padding-bottom: 5px">
+            EMPRESA RÉ FICTÍCIA LTDA
+        </td>
+    </tr>
+</table>
+<h2 class="subtitle tituloDoBloco">Movimentações</h2>
+<div id="containerExibirMovimentacoes" style="padding: 8px 0;">
+    <a id="btnExibirMovimentacoes" href="javascript:" class="linkNaoSelecionado">Exibir movimentações</a>
+</div>
+<div id="containerMovimentacoes"></div>
+<form action="/cpopg/show.do?processo.codigo=B00001AAA0000" id="popupSenha" style="display: none;" method="POST">
+    <input type="password" name="senhaProcesso" maxlength="12" value="" id="senhaProcesso">
+    É necessário informar uma senha para acessar processo em segredo de justiça, bem como para acessar autos dos demais processos.
+</form>
+</body>
+</html>

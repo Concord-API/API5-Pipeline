@@ -1,0 +1,20 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Portal de Serviços e-SAJ</title>
+<script language="javascript" type="text/JavaScript">
+    $.saj.acessoRecurso = {
+        popupSenha: {
+            mostrar: 'true' == 'true',
+            titulo: 'Senha do processo'
+        }
+    };
+</script>
+</head>
+<body>
+<form action="/cpopg/show.do?processo.codigo=B00001BBB0000" id="popupSenha" method="POST">
+    <input type="password" name="senhaProcesso" maxlength="12" value="" id="senhaProcesso">
+    É necessário informar uma senha para acessar processo em segredo de justiça, bem como para acessar autos dos demais processos.
+</form>
+</body>
+</html>
