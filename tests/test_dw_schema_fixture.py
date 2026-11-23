@@ -4,6 +4,7 @@ from pipeline.dump import dump_schema, schema_ddl
 
 MIGRATED_RELATIONS = {
     "dim_court", "dim_judging_body", "dim_case_class", "dim_case", "dim_date",
+    "case_site_detail", "case_site_movement",
     "dim_decision_outcome", "dim_movement", "dim_subject", "dim_theme", "dim_doctrine",
     "fact_case_event", "bridge_case_subject", "bridge_theme_subject", "bridge_subject_doctrine",
     "bridge_theme_precedent",

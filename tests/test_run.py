@@ -116,7 +116,8 @@ def same_vector_encoder(texts):
 
 
 def run_once(
-    postgres_container, dw_ready, tmp_path, extra_raw=(), extra_precedents=(), tpu=None
+    postgres_container, dw_ready, tmp_path, extra_raw=(), extra_precedents=(), tpu=None,
+    site_cases=(),
 ):
     tpu = tpu or load_tpu(FIXTURE_TPU)
     local_dsn = (
@@ -151,7 +152,11 @@ def run_once(
         cursor.execute("TRUNCATE raw.doctrine_article RESTART IDENTITY")
         insert_raw_doctrine(cursor)
         cursor.execute("TRUNCATE raw.stj_precedent")
+        cursor.execute("TRUNCATE raw.stj_ruling")
         for insert in extra_precedents:
+            insert(cursor)
+        cursor.execute("TRUNCATE raw.court_site_case")
+        for insert in site_cases:
             insert(cursor)
 
         output_path = tmp_path / "load.sql"
@@ -368,3 +373,106 @@ def test_run_ties_the_stj_theses_to_the_themes(postgres_container, dw_ready, tmp
             "JOIN dw.dim_precedent p USING (precedent_sk)"
         )
         assert cursor.fetchall() == [("Contratos", 952, METHOD)]
+
+
+def insert_raw_ruling(cursor):
+    payload = {
+        "id": "000819199",
+        "numeroProcesso": "1997135",
+        "siglaClasse": "AgInt no REsp",
+        "nomeOrgaoJulgador": "TERCEIRA TURMA",
+        "ementa": "PROCESSUAL CIVIL. AGRAVO INTERNO NO RECURSO ESPECIAL.",
+        "dataDecisao": "20220627",
+    }
+    cursor.execute(
+        "INSERT INTO raw.stj_ruling (id, dataset, source_url, payload) VALUES (%s, %s, %s, %s)",
+        (
+            "000819199",
+            "espelhos-de-acordaos-terceira-turma",
+            "https://dadosabertos.web.stj.jus.br/20220630.json",
+            json.dumps(payload),
+        ),
+    )
+
+
+def test_run_loads_the_stj_rulings_into_the_load_file(postgres_container, dw_ready, tmp_path):
+    content = run_once(
+        postgres_container, dw_ready, tmp_path, extra_precedents=[insert_raw_ruling]
+    )
+
+    assert "COPY dw.dim_ruling" in content
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT source_id, case_number, summary FROM dw.dim_ruling")
+        assert cursor.fetchall() == [
+            ("000819199", "AgInt no REsp 1997135",
+             "PROCESSUAL CIVIL. AGRAVO INTERNO NO RECURSO ESPECIAL."),
+        ]
+
+
+def insert_raw_ruling_of_a_sample_case(cursor):
+    payload = {
+        "id": "000900001",
+        "numeroProcesso": "0000001-00.2024.8.26.0100",
+        "nomeOrgaoJulgador": "TERCEIRA TURMA",
+        "ementa": "PROCESSUAL CIVIL. RECURSO ESPECIAL.",
+        "dataDecisao": "20250110",
+    }
+    cursor.execute(
+        "INSERT INTO raw.stj_ruling (id, dataset, source_url, payload) VALUES (%s, %s, %s, %s)",
+        (
+            "000900001",
+            "espelhos-de-acordaos-terceira-turma",
+            "https://dadosabertos.web.stj.jus.br/20250131.json",
+            json.dumps(payload),
+        ),
+    )
+
+
+def test_run_ties_the_rulings_to_the_themes(postgres_container, dw_ready, tmp_path):
+    content = run_once(
+        postgres_container,
+        dw_ready,
+        tmp_path,
+        extra_precedents=[insert_raw_ruling_of_a_sample_case],
+    )
+
+    assert "COPY dw.bridge_theme_ruling" in content
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT t.theme_name, r.source_id, b.link_method FROM dw.bridge_theme_ruling b "
+            "JOIN dw.dim_theme t USING (theme_sk) JOIN dw.dim_ruling r USING (ruling_sk)"
+        )
+        assert cursor.fetchall() == [("Contratos", "000900001", "cnj_exact")]
+
+
+def insert_site_case(cursor):
+    payload = {
+        "case_class": "Procedimento Comum Cível",
+        "subjects": ["Contratos"],
+        "judging_body": "1ª Vara Cível",
+        "judge": "Juiz Exemplo",
+        "filed_at": "2024-01-10",
+        "movements": [{"date": "2025-06-15", "description": "Julgada procedente a ação"}],
+    }
+    cursor.execute(
+        "INSERT INTO raw.court_site_case "
+        "(court, case_number, court_level, source, source_url, status, payload) "
+        "VALUES ('TJSP', '00000010020248260100', 'First', 'esaj_tjsp_cpopg', "
+        "'https://esaj.tjsp.jus.br/cpopg/search.do', 'found', %s)",
+        (json.dumps(payload),),
+    )
+
+
+def test_run_loads_the_cases_collected_from_the_court_site(postgres_container, dw_ready, tmp_path):
+    content = run_once(postgres_container, dw_ready, tmp_path, site_cases=[insert_site_case])
+
+    assert "COPY dw.case_site_detail" in content
+    assert "COPY dw.case_site_movement" in content
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT c.case_number, d.judging_body, m.description FROM dw.case_site_detail d "
+            "JOIN dw.dim_case c USING (case_sk) JOIN dw.case_site_movement m USING (case_sk)"
+        )
+        assert cursor.fetchall() == [
+            ("00000010020248260100", "1ª Vara Cível", "Julgada procedente a ação")
+        ]
