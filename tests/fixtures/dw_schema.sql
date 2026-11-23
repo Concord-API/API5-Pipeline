@@ -249,12 +249,61 @@ CREATE TABLE dw.bridge_theme_precedent (
 
 
 --
+-- Name: bridge_theme_ruling; Type: TABLE; Schema: dw; Owner: -
+--
+
+CREATE TABLE dw.bridge_theme_ruling (
+    theme_sk bigint NOT NULL,
+    ruling_sk bigint NOT NULL,
+    link_method text NOT NULL,
+    similarity real,
+    similarity_threshold real,
+    CONSTRAINT bridge_theme_ruling_similarity_check CHECK (((similarity IS NULL) OR ((similarity >= (0)::double precision) AND (similarity <= (1)::double precision)))),
+    CONSTRAINT bridge_theme_ruling_threshold_check CHECK (((similarity_threshold IS NULL) OR ((similarity_threshold >= (0)::double precision) AND (similarity_threshold <= (1)::double precision))))
+);
+
+
+--
 -- Name: bridge_theme_subject; Type: TABLE; Schema: dw; Owner: -
 --
 
 CREATE TABLE dw.bridge_theme_subject (
     theme_sk bigint NOT NULL,
     subject_sk bigint NOT NULL
+);
+
+
+--
+-- Name: case_site_detail; Type: TABLE; Schema: dw; Owner: -
+--
+
+CREATE TABLE dw.case_site_detail (
+    case_sk bigint NOT NULL,
+    status text NOT NULL,
+    case_class text,
+    subjects text[] DEFAULT '{}'::text[] NOT NULL,
+    judging_body text,
+    judge text,
+    filed_at date,
+    decision_date date,
+    decision_result text,
+    situation text,
+    source text NOT NULL,
+    source_url text NOT NULL,
+    extracted_at timestamp with time zone NOT NULL,
+    CONSTRAINT case_site_detail_status_check CHECK ((status = ANY (ARRAY['found'::text, 'not_found'::text, 'sealed'::text])))
+);
+
+
+--
+-- Name: case_site_movement; Type: TABLE; Schema: dw; Owner: -
+--
+
+CREATE TABLE dw.case_site_movement (
+    case_sk bigint NOT NULL,
+    seq integer NOT NULL,
+    moved_at date NOT NULL,
+    description text NOT NULL
 );
 
 
@@ -570,6 +619,38 @@ CREATE TABLE dw.dim_precedent (
 
 ALTER TABLE dw.dim_precedent ALTER COLUMN precedent_sk ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME dw.dim_precedent_precedent_sk_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: dim_ruling; Type: TABLE; Schema: dw; Owner: -
+--
+
+CREATE TABLE dw.dim_ruling (
+    ruling_sk bigint NOT NULL,
+    source text NOT NULL,
+    source_id text NOT NULL,
+    case_number text,
+    court_code text NOT NULL,
+    judging_body text,
+    judged_at date,
+    summary text NOT NULL,
+    source_url text NOT NULL,
+    extracted_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: dim_ruling_ruling_sk_seq; Type: SEQUENCE; Schema: dw; Owner: -
+--
+
+ALTER TABLE dw.dim_ruling ALTER COLUMN ruling_sk ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME dw.dim_ruling_ruling_sk_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -1214,6 +1295,14 @@ ALTER TABLE ONLY dw.bridge_theme_precedent
 
 
 --
+-- Name: bridge_theme_ruling bridge_theme_ruling_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.bridge_theme_ruling
+    ADD CONSTRAINT bridge_theme_ruling_pkey PRIMARY KEY (theme_sk, ruling_sk);
+
+
+--
 -- Name: bridge_theme_subject bridge_theme_subject_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
 --
 
@@ -1235,6 +1324,22 @@ ALTER TABLE ONLY dw.dim_case
 
 ALTER TABLE ONLY dw.dim_case_class
     ADD CONSTRAINT dim_case_class_class_name_key UNIQUE (class_name);
+
+
+--
+-- Name: case_site_detail case_site_detail_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.case_site_detail
+    ADD CONSTRAINT case_site_detail_pkey PRIMARY KEY (case_sk);
+
+
+--
+-- Name: case_site_movement case_site_movement_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.case_site_movement
+    ADD CONSTRAINT case_site_movement_pkey PRIMARY KEY (case_sk, seq);
 
 
 --
@@ -1374,6 +1479,22 @@ ALTER TABLE ONLY dw.dim_precedent
 
 
 --
+-- Name: dim_ruling dim_ruling_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.dim_ruling
+    ADD CONSTRAINT dim_ruling_pkey PRIMARY KEY (ruling_sk);
+
+
+--
+-- Name: dim_ruling dim_ruling_source_source_id_key; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.dim_ruling
+    ADD CONSTRAINT dim_ruling_source_source_id_key UNIQUE (source, source_id);
+
+
+--
 -- Name: dim_subject dim_subject_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
 --
 
@@ -1464,6 +1585,13 @@ CREATE INDEX idx_bridge_theme_precedent_precedent ON dw.bridge_theme_precedent U
 --
 
 CREATE INDEX idx_bridge_subject_precedent_precedent ON dw.bridge_subject_precedent USING btree (precedent_sk);
+
+
+--
+-- Name: idx_bridge_theme_ruling_ruling; Type: INDEX; Schema: dw; Owner: -
+--
+
+CREATE INDEX idx_bridge_theme_ruling_ruling ON dw.bridge_theme_ruling USING btree (ruling_sk);
 
 
 --
@@ -1706,6 +1834,22 @@ ALTER TABLE ONLY dw.bridge_theme_precedent
 
 
 --
+-- Name: bridge_theme_ruling bridge_theme_ruling_ruling_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.bridge_theme_ruling
+    ADD CONSTRAINT bridge_theme_ruling_ruling_sk_fkey FOREIGN KEY (ruling_sk) REFERENCES dw.dim_ruling(ruling_sk) ON DELETE CASCADE;
+
+
+--
+-- Name: bridge_theme_ruling bridge_theme_ruling_theme_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.bridge_theme_ruling
+    ADD CONSTRAINT bridge_theme_ruling_theme_sk_fkey FOREIGN KEY (theme_sk) REFERENCES dw.dim_theme(theme_sk) ON DELETE CASCADE;
+
+
+--
 -- Name: bridge_theme_subject bridge_theme_subject_subject_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
 --
 
@@ -1719,6 +1863,22 @@ ALTER TABLE ONLY dw.bridge_theme_subject
 
 ALTER TABLE ONLY dw.bridge_theme_subject
     ADD CONSTRAINT bridge_theme_subject_theme_sk_fkey FOREIGN KEY (theme_sk) REFERENCES dw.dim_theme(theme_sk) ON DELETE CASCADE;
+
+
+--
+-- Name: case_site_detail case_site_detail_case_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.case_site_detail
+    ADD CONSTRAINT case_site_detail_case_sk_fkey FOREIGN KEY (case_sk) REFERENCES dw.dim_case(case_sk);
+
+
+--
+-- Name: case_site_movement case_site_movement_case_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.case_site_movement
+    ADD CONSTRAINT case_site_movement_case_sk_fkey FOREIGN KEY (case_sk) REFERENCES dw.case_site_detail(case_sk) ON DELETE CASCADE;
 
 
 --
