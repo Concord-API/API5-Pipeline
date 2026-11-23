@@ -25,6 +25,7 @@ def empty_database(dw_ready):
         ensure_raw(cursor)
         cursor.execute("TRUNCATE raw.datajud_case RESTART IDENTITY CASCADE")
         cursor.execute("TRUNCATE raw.doctrine_article RESTART IDENTITY")
+        cursor.execute("TRUNCATE raw.stj_precedent")
     return dw_ready
 
 

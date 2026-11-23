@@ -6,6 +6,7 @@ import pytest
 import requests
 
 from pipeline import dw_precedent
+from pipeline.dw_precedent import out_of_scope_codes
 from pipeline.raw_schema import ensure as ensure_raw
 from pipeline.stj_precedents import (
     TEMAS_URL,
@@ -131,6 +132,15 @@ def test_loads_the_valid_theses_into_the_warehouse(cursor):
     assert rows[0][6] == tema_link(952)
 
 
+def test_records_the_loaded_stj_themes_as_repetitive_themes(cursor):
+    harvest(cursor, lambda url: TEMAS)
+
+    dw_precedent.load(cursor, area_codes={1156, 9985})
+
+    cursor.execute("SELECT DISTINCT precedent_type FROM dw.dim_precedent")
+    assert cursor.fetchall() == [("tema_repetitivo",)]
+
+
 def test_links_a_thesis_to_its_subjects_but_not_to_the_area(cursor):
     harvest(cursor, lambda url: TEMAS)
 
@@ -219,3 +229,49 @@ def test_reports_a_client_error_at_once(monkeypatch):
 
     with pytest.raises(requests.HTTPError):
         download(TEMAS_URL, sleep=lambda seconds: None)
+
+
+OTHER_BRANCHES = "\n".join([
+    HEADER,
+    row(1, "Tema", 2001, "2020-01-10", "Trânsito em Julgado", "Verbas rescisórias.",
+        "Tese trabalhista.", "S1", "864- DIREITO DO TRABALHO, 2581- Rescisão do Contrato"),
+    row(2, "Tema", 2002, "2020-01-10", "Trânsito em Julgado", "Propaganda eleitoral.",
+        "Tese eleitoral.", "S1", "11428- DIREITO ELEITORAL"),
+    row(3, "Tema", 2003, "2020-01-10", "Trânsito em Julgado", "Plano de saúde do empregado.",
+        "Tese mista.", "S2", "2581- Rescisão do Contrato, 6233- Planos de Saúde"),
+]) + "\n"
+
+LABOUR_AND_ELECTORAL = {864, 2581, 11428}
+
+
+def test_lists_the_labour_and_electoral_subjects_of_the_tpu():
+    tpu = {"areas": {
+        "864": {"nome": "DIREITO DO TRABALHO", "codigos": [864, 2581]},
+        "11428": {"nome": "DIREITO ELEITORAL", "codigos": [11428, 11500]},
+        "10739": {"nome": "DIREITO ELEITORAL E PROCESSO ELEITORAL DO STF", "codigos": [10739]},
+        "8826": {"nome": "DIREITO PROCESSUAL CIVIL E DO TRABALHO", "codigos": [8826]},
+        "899": {"nome": "DIREITO CIVIL", "codigos": [899]},
+    }}
+
+    assert out_of_scope_codes(tpu) == {864, 2581, 11428, 11500, 10739}
+
+
+def test_leaves_out_the_labour_and_electoral_theses(cursor):
+    harvest(cursor, lambda url: OTHER_BRANCHES)
+
+    dw_precedent.load(cursor, area_codes={1156, 9985}, out_of_scope=LABOUR_AND_ELECTORAL)
+
+    cursor.execute("SELECT precedent_number FROM dw.dim_precedent ORDER BY precedent_number")
+    assert [number for (number,) in cursor.fetchall()] == [2003]
+
+
+def test_keeps_a_thesis_that_also_has_a_civil_subject(cursor):
+    harvest(cursor, lambda url: OTHER_BRANCHES)
+
+    dw_precedent.load(cursor, area_codes={1156, 9985}, out_of_scope=LABOUR_AND_ELECTORAL)
+
+    cursor.execute(
+        "SELECT p.precedent_number, s.subject_code FROM dw.bridge_subject_precedent b "
+        "JOIN dw.dim_precedent p USING (precedent_sk) JOIN dw.dim_subject s USING (subject_sk)"
+    )
+    assert cursor.fetchall() == [(2003, 6233)]

@@ -116,9 +116,10 @@ def same_vector_encoder(texts):
 
 
 def run_once(
-    postgres_container, dw_ready, tmp_path, extra_raw=(), extra_precedents=(), site_cases=()
+    postgres_container, dw_ready, tmp_path, extra_raw=(), extra_precedents=(), tpu=None,
+    site_cases=(),
 ):
-    tpu = load_tpu(FIXTURE_TPU)
+    tpu = tpu or load_tpu(FIXTURE_TPU)
     local_dsn = (
         f"postgresql://{postgres_container.username}:{postgres_container.password}"
         f"@localhost:5432/{postgres_container.dbname}"
@@ -329,6 +330,49 @@ def test_run_links_the_stj_theses_to_the_theme_subjects(postgres_container, dw_r
             "JOIN dw.dim_precedent p USING (precedent_sk) JOIN dw.dim_subject s USING (subject_sk)"
         )
         assert cursor.fetchall() == [(952, "Contratos")]
+
+
+def insert_raw_labour_precedent(cursor):
+    payload = {
+        "tipoPrecedente": "Tema",
+        "numeroPrecedente": "2001",
+        "teseFirmada": "Tese trabalhista.",
+        "situacao": "Trânsito em Julgado",
+        "Assuntos": "864- DIREITO DO TRABALHO",
+    }
+    cursor.execute(
+        "INSERT INTO raw.stj_precedent (kind, number, source_url, payload) VALUES (%s, %s, %s, %s)",
+        ("Tema", 2001, "https://dadosabertos.web.stj.jus.br/temas.csv", json.dumps(payload)),
+    )
+
+
+def test_run_leaves_the_labour_precedents_out(postgres_container, dw_ready, tmp_path):
+    tpu = load_tpu(FIXTURE_TPU)
+    tpu["areas"]["864"] = {"nome": "DIREITO DO TRABALHO", "codigos": [864]}
+
+    run_once(
+        postgres_container, dw_ready, tmp_path,
+        extra_precedents=[insert_raw_precedent, insert_raw_labour_precedent], tpu=tpu,
+    )
+
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT precedent_number FROM dw.dim_precedent ORDER BY precedent_number")
+        assert [number for (number,) in cursor.fetchall()] == [952]
+
+
+def test_run_ties_the_stj_theses_to_the_themes(postgres_container, dw_ready, tmp_path):
+    content = run_once(
+        postgres_container, dw_ready, tmp_path, extra_precedents=[insert_raw_precedent]
+    )
+
+    assert "COPY dw.bridge_theme_precedent" in content
+    with psycopg2.connect(dw_ready) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT t.theme_name, p.precedent_number, b.link_method "
+            "FROM dw.bridge_theme_precedent b JOIN dw.dim_theme t USING (theme_sk) "
+            "JOIN dw.dim_precedent p USING (precedent_sk)"
+        )
+        assert cursor.fetchall() == [("Contratos", 952, METHOD)]
 
 
 def insert_raw_ruling(cursor):
