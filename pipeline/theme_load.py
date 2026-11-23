@@ -1,5 +1,6 @@
 import psycopg2.extras
 
+from pipeline.theme_area import TPU_AREA_FALLBACK
 from pipeline.theme_registry import get_or_create_key
 
 
@@ -38,6 +39,10 @@ def set_official_areas(cursor):
         ) origem
         WHERE origem.theme_sk = th.theme_sk
     """)
+    cursor.executemany(
+        "UPDATE dw.dim_theme SET subject_area = %s WHERE subject_area IS NULL AND tpu_area = %s",
+        [(area, tpu_area) for tpu_area, area in TPU_AREA_FALLBACK.items()],
+    )
 
 
 def assert_no_orphan_themes(cursor):
