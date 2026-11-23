@@ -235,6 +235,21 @@ CREATE TABLE dw.bridge_subject_precedent (
 
 
 --
+-- Name: bridge_theme_ruling; Type: TABLE; Schema: dw; Owner: -
+--
+
+CREATE TABLE dw.bridge_theme_ruling (
+    theme_sk bigint NOT NULL,
+    ruling_sk bigint NOT NULL,
+    link_method text NOT NULL,
+    similarity real,
+    similarity_threshold real,
+    CONSTRAINT bridge_theme_ruling_similarity_check CHECK (((similarity IS NULL) OR ((similarity >= (0)::double precision) AND (similarity <= (1)::double precision)))),
+    CONSTRAINT bridge_theme_ruling_threshold_check CHECK (((similarity_threshold IS NULL) OR ((similarity_threshold >= (0)::double precision) AND (similarity_threshold <= (1)::double precision))))
+);
+
+
+--
 -- Name: bridge_theme_subject; Type: TABLE; Schema: dw; Owner: -
 --
 
@@ -594,6 +609,38 @@ ALTER TABLE dw.dim_precedent ALTER COLUMN precedent_sk ADD GENERATED ALWAYS AS I
 
 
 --
+-- Name: dim_ruling; Type: TABLE; Schema: dw; Owner: -
+--
+
+CREATE TABLE dw.dim_ruling (
+    ruling_sk bigint NOT NULL,
+    source text NOT NULL,
+    source_id text NOT NULL,
+    case_number text,
+    court_code text NOT NULL,
+    judging_body text,
+    judged_at date,
+    summary text NOT NULL,
+    source_url text NOT NULL,
+    extracted_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: dim_ruling_ruling_sk_seq; Type: SEQUENCE; Schema: dw; Owner: -
+--
+
+ALTER TABLE dw.dim_ruling ALTER COLUMN ruling_sk ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME dw.dim_ruling_ruling_sk_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: dim_subject; Type: TABLE; Schema: dw; Owner: -
 --
 
@@ -699,6 +746,34 @@ CREATE TABLE dw.strength_config (
     CONSTRAINT strength_config_id_check CHECK ((id = 1)),
     CONSTRAINT strength_config_min_judged_for_percentage_check CHECK ((min_judged_for_percentage >= 1))
 );
+
+
+--
+-- Name: theme_appeal_by_instance; Type: MATERIALIZED VIEW; Schema: dw; Owner: -
+--
+
+CREATE MATERIALIZED VIEW dw.theme_appeal_by_instance AS
+ SELECT bts.theme_sk,
+        CASE
+            WHEN (c.court_code = ANY (ARRAY['STJ'::text, 'STF'::text])) THEN 'superior'::text
+            ELSE 'state'::text
+        END AS instance,
+    count(DISTINCT ccr.case_sk) AS judged_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'Granted'::text)) AS upheld_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'PartiallyGranted'::text)) AS partially_upheld_count,
+    count(DISTINCT ccr.case_sk) FILTER (WHERE (o.outcome_code = 'Denied'::text)) AS rejected_count
+   FROM ((((dw.bridge_theme_subject bts
+     JOIN dw.bridge_case_subject bcs ON ((bcs.subject_sk = bts.subject_sk)))
+     JOIN dw.case_current_result ccr ON ((ccr.case_sk = bcs.case_sk)))
+     JOIN dw.dim_court c ON ((c.court_sk = ccr.court_sk)))
+     JOIN dw.dim_decision_outcome o ON ((o.outcome_sk = ccr.outcome_sk)))
+  WHERE (ccr.polarity_reference = 'pretensao_recorrente'::text)
+  GROUP BY bts.theme_sk,
+        CASE
+            WHEN (c.court_code = ANY (ARRAY['STJ'::text, 'STF'::text])) THEN 'superior'::text
+            ELSE 'state'::text
+        END
+  WITH NO DATA;
 
 
 --
@@ -1193,6 +1268,14 @@ ALTER TABLE ONLY dw.bridge_subject_precedent
 
 
 --
+-- Name: bridge_theme_ruling bridge_theme_ruling_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.bridge_theme_ruling
+    ADD CONSTRAINT bridge_theme_ruling_pkey PRIMARY KEY (theme_sk, ruling_sk);
+
+
+--
 -- Name: bridge_theme_subject bridge_theme_subject_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
 --
 
@@ -1369,6 +1452,22 @@ ALTER TABLE ONLY dw.dim_precedent
 
 
 --
+-- Name: dim_ruling dim_ruling_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.dim_ruling
+    ADD CONSTRAINT dim_ruling_pkey PRIMARY KEY (ruling_sk);
+
+
+--
+-- Name: dim_ruling dim_ruling_source_source_id_key; Type: CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.dim_ruling
+    ADD CONSTRAINT dim_ruling_source_source_id_key UNIQUE (source, source_id);
+
+
+--
 -- Name: dim_subject dim_subject_pkey; Type: CONSTRAINT; Schema: dw; Owner: -
 --
 
@@ -1452,6 +1551,13 @@ CREATE INDEX idx_bridge_case_subject_subject ON dw.bridge_case_subject USING btr
 --
 
 CREATE INDEX idx_bridge_subject_precedent_precedent ON dw.bridge_subject_precedent USING btree (precedent_sk);
+
+
+--
+-- Name: idx_bridge_theme_ruling_ruling; Type: INDEX; Schema: dw; Owner: -
+--
+
+CREATE INDEX idx_bridge_theme_ruling_ruling ON dw.bridge_theme_ruling USING btree (ruling_sk);
 
 
 --
@@ -1557,6 +1663,13 @@ CREATE INDEX idx_fact_case_event_extracted_at ON dw.fact_case_event USING btree 
 --
 
 CREATE INDEX idx_fact_case_event_movement ON dw.fact_case_event USING btree (movement_sk);
+
+
+--
+-- Name: idx_theme_appeal_by_instance_pk; Type: INDEX; Schema: dw; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_theme_appeal_by_instance_pk ON dw.theme_appeal_by_instance USING btree (theme_sk, instance);
 
 
 --
@@ -1671,6 +1784,22 @@ ALTER TABLE ONLY dw.bridge_subject_precedent
 
 
 --
+-- Name: bridge_theme_ruling bridge_theme_ruling_ruling_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.bridge_theme_ruling
+    ADD CONSTRAINT bridge_theme_ruling_ruling_sk_fkey FOREIGN KEY (ruling_sk) REFERENCES dw.dim_ruling(ruling_sk) ON DELETE CASCADE;
+
+
+--
+-- Name: bridge_theme_ruling bridge_theme_ruling_theme_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
+--
+
+ALTER TABLE ONLY dw.bridge_theme_ruling
+    ADD CONSTRAINT bridge_theme_ruling_theme_sk_fkey FOREIGN KEY (theme_sk) REFERENCES dw.dim_theme(theme_sk) ON DELETE CASCADE;
+
+
+--
 -- Name: bridge_theme_subject bridge_theme_subject_subject_sk_fkey; Type: FK CONSTRAINT; Schema: dw; Owner: -
 --
 
@@ -1780,26 +1909,6 @@ ALTER TABLE ONLY dw.fact_case_event
 
 ALTER TABLE ONLY dw.theme_narrative
     ADD CONSTRAINT theme_narrative_theme_sk_fkey FOREIGN KEY (theme_sk) REFERENCES dw.dim_theme(theme_sk);
-
-
-CREATE MATERIALIZED VIEW dw.theme_appeal_by_instance AS
-SELECT
-    bts.theme_sk,
-    CASE WHEN c.court_code IN ('STJ', 'STF') THEN 'superior' ELSE 'state' END AS instance,
-    count(DISTINCT ccr.case_sk) AS judged_count,
-    count(DISTINCT ccr.case_sk) FILTER (WHERE o.outcome_code = 'Granted') AS upheld_count,
-    count(DISTINCT ccr.case_sk) FILTER (WHERE o.outcome_code = 'PartiallyGranted') AS partially_upheld_count,
-    count(DISTINCT ccr.case_sk) FILTER (WHERE o.outcome_code = 'Denied') AS rejected_count
-FROM dw.bridge_theme_subject bts
-JOIN dw.bridge_case_subject bcs ON bcs.subject_sk = bts.subject_sk
-JOIN dw.case_current_result ccr ON ccr.case_sk = bcs.case_sk
-JOIN dw.dim_court c ON c.court_sk = ccr.court_sk
-JOIN dw.dim_decision_outcome o ON o.outcome_sk = ccr.outcome_sk
-WHERE ccr.polarity_reference = 'pretensao_recorrente'
-GROUP BY bts.theme_sk, CASE WHEN c.court_code IN ('STJ', 'STF') THEN 'superior' ELSE 'state' END
-WITH NO DATA;
-
-CREATE UNIQUE INDEX idx_theme_appeal_by_instance_pk ON dw.theme_appeal_by_instance USING btree (theme_sk, instance);
 
 
 --

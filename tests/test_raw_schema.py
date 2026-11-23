@@ -16,6 +16,7 @@ def test_creates_the_raw_schema_on_an_empty_database(postgres_url):
 
     assert table_exists(postgres_url)
     assert table_exists(postgres_url, "raw.doctrine_article")
+    assert table_exists(postgres_url, "raw.stj_ruling")
 
 
 def test_running_it_again_does_not_fail(postgres_url):

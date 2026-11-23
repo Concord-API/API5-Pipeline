@@ -11,9 +11,11 @@ from pipeline import (
     dw_movement_polarity,
     dw_precedent,
     dw_reference,
+    dw_ruling,
     dw_subject,
     integrity,
     load_file,
+    ruling_link,
     search_synonym,
     staging,
     strength_config,
@@ -82,9 +84,11 @@ def run(cursor, dsn, tpu, groups, output_path, runner=None, encoder=local_encode
     transform_all(cursor, tpu)
     load_dimensions(cursor, tpu, today.year + 1)
     dw_precedent.load(cursor, dw_precedent.area_codes(tpu))
+    dw_ruling.load(cursor)
     dw_court_site_case.load(cursor)
     doctrine_link.link(cursor, encoder)
     load_themes(cursor, groups)
+    ruling_link.link(cursor, encoder)
     strength_config.seed(cursor, today.year)
     search_synonym.seed(cursor, search_synonym.load())
     theme_narrative.generate(cursor, today)
