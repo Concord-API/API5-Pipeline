@@ -4,7 +4,7 @@ import psycopg2
 import pytest
 
 from pipeline.doctrine_link import METHOD, THRESHOLD
-from pipeline.ruling_link import EXACT_METHOD, TOP_K, link, links
+from pipeline.ruling_link import EXACT_METHOD, TOP_K, link, links, ruling_topic
 
 
 def unit(angle):
@@ -18,13 +18,15 @@ EMENTA_DISTANTE = "PLANO DE SAÚDE. REAJUSTE POR FAIXA ETÁRIA. PRESCRIÇÃO."
 EMENTA_SEM_TERMOS = "PROCESSUAL CIVIL. AGRAVO INTERNO. SÚMULA 7."
 EMENTA_EXATA = "PROCESSUAL CIVIL. RECURSO ESPECIAL. CONTRATOS."
 
+AREA_THEME = "DIREITO CIVIL"
+
 VECTORS = {
     REAJUSTE: unit(0),
     CIRURGIA: unit(90),
-    EMENTA_REAJUSTE: unit(5),
-    EMENTA_DISTANTE: unit(70),
-    EMENTA_SEM_TERMOS: unit(2),
-    EMENTA_EXATA: unit(80),
+    AREA_THEME: unit(5),
+    ruling_topic(EMENTA_REAJUSTE): unit(5),
+    ruling_topic(EMENTA_DISTANTE): unit(70),
+    ruling_topic(EMENTA_EXATA): unit(80),
 }
 
 
@@ -37,6 +39,27 @@ def test_declares_the_methods_the_threshold_and_the_closest_themes_kept():
     assert METHOD == "embedding_cosine+lexical"
     assert THRESHOLD == 0.55
     assert TOP_K == 3
+
+
+STJ_SUMMARY = (
+    "DIREITO PROCESSUAL CIVIL. EMBARGOS DE DECLARAÇÃO NO AGRAVO INTERNO NO AGRAVO EM\n"
+    " RECURSO ESPECIAL. PLANO DE SAÚDE. TRATAMENTO ONCOLÓGICO. ROL DA ANS. NEGATIVA DE\n"
+    " PRESTAÇÃO JURISDICIONAL. SÚMULA N. 7/STJ.\n 1. A operadora deve custear o tratamento."
+)
+
+
+def test_reads_the_subject_of_a_summary_without_its_procedural_heading():
+    assert ruling_topic(STJ_SUMMARY) == "PLANO DE SAÚDE. TRATAMENTO ONCOLÓGICO. ROL DA ANS"
+
+
+def test_keeps_a_procedural_subject_that_is_the_point_of_the_ruling():
+    summary = "DIREITO PROCESSUAL CIVIL. EMBARGOS DE DECLARAÇÃO. COISA JULGADA E PRECLUSÃO."
+
+    assert ruling_topic(summary) == "COISA JULGADA E PRECLUSÃO"
+
+
+def test_reads_no_subject_from_a_summary_that_is_only_procedural():
+    assert ruling_topic(EMENTA_SEM_TERMOS) == ""
 
 
 def test_ties_a_ruling_to_the_theme_above_the_declared_threshold():
@@ -130,6 +153,14 @@ def test_ties_the_rulings_without_a_case_of_the_theme_by_similarity(cursor):
         (1, "r1", METHOD, pytest.approx(THRESHOLD), False),
         (2, "r2", EXACT_METHOD, None, True),
     ]
+
+
+def test_never_ties_a_ruling_to_a_theme_named_after_a_whole_area(cursor):
+    cursor.execute("INSERT INTO dw.dim_theme (theme_name, theme_key) VALUES (%s, 3)", (AREA_THEME,))
+
+    link(cursor, fake_encoder)
+
+    assert all(theme != 3 for theme, *_ in stored_links(cursor))
 
 
 def test_link_again_replaces_the_previous_ties(cursor):
