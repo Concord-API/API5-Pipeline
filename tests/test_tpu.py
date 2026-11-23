@@ -68,3 +68,16 @@ def test_datajud_civil_query_takes_the_classes_of_another_court(tpu):
 def test_class_codes_are_the_appeals_in_the_stj_and_the_civil_classes_elsewhere(tpu):
     assert class_codes(tpu, "stj") == [1032, 11881, 1137, 11956]
     assert class_codes(tpu, "tjsp") == [7, 436]
+
+
+INFRACTIONAL_ACT = 9634
+THEFT_BY_A_MINOR = 9675
+FOSTER_CARE_INSPECTION = 15197
+
+
+def test_the_infractional_acts_of_minors_count_as_penal_subjects():
+    tpu = load()
+
+    assert tpu["assuntos_penal"]["raizes"][str(INFRACTIONAL_ACT)] == "ATO INFRACIONAL (ECA)"
+    assert {INFRACTIONAL_ACT, THEFT_BY_A_MINOR} <= set(penal_subject_codes(tpu))
+    assert FOSTER_CARE_INSPECTION not in penal_subject_codes(tpu)

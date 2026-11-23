@@ -1,8 +1,10 @@
 import psycopg2
 import pytest
 
+from pipeline.theme_area import TPU_AREA_FALLBACK
 from pipeline.theme_load import assert_no_orphan_themes, load, set_official_areas
 from pipeline.theme_registry import ensure as ensure_registry
+from pipeline.tpu import load as load_tpu
 
 
 @pytest.fixture
@@ -76,6 +78,47 @@ def test_set_official_areas_uses_the_majority(cursor):
 
     cursor.execute("SELECT tpu_area FROM dw.dim_theme WHERE theme_name = 'Tema'")
     assert cursor.fetchone() == ("DIREITO CIVIL",)
+
+
+@pytest.mark.parametrize(
+    ("tpu_area", "subject_area"),
+    [
+        ("DIREITO CIVIL", "CIVIL"),
+        ("DIREITO ADMINISTRATIVO E OUTRAS MATÉRIAS DE DIREITO PÚBLICO", "ADMINISTRATIVO"),
+        ("DIREITO PROCESSUAL CIVIL E DO TRABALHO", "PROCESSUAL"),
+        ("DIREITO DO TRABALHO", "TRABALHISTA"),
+        ("DIREITO DA CRIANÇA E DO ADOLESCENTE", "FAMILIA"),
+        ("DIREITO À EDUCAÇÃO", "ADMINISTRATIVO"),
+        ("REGISTROS PÚBLICOS", "CIVIL"),
+        ("DIREITO ASSISTENCIAL", "PREVIDENCIARIO"),
+        ("DIREITO MARÍTIMO", "EMPRESARIAL"),
+        ("QUESTÕES DE ALTA COMPLEXIDADE, GRANDE IMPACTO E REPERCUSSÃO", "AMBIENTAL"),
+    ],
+)
+def test_set_official_areas_tags_an_untagged_theme_by_its_tpu_area(cursor, tpu_area, subject_area):
+    sk = insert_subject(cursor, "Assunto sem regra", 1, tpu_area=tpu_area)
+    load(cursor, [{"theme_name": "Tema sem regra", "subject_area": None, "subject_sks": [sk]}])
+
+    set_official_areas(cursor)
+
+    assert fetch_theme(cursor, "Tema sem regra")[2] == subject_area
+
+
+def test_set_official_areas_keeps_the_area_a_theme_already_has(cursor):
+    sk = insert_subject(cursor, "Plano de saúde", 1, tpu_area="DIREITO DO CONSUMIDOR")
+    load(cursor, [{"theme_name": "Plano de saúde", "subject_area": "SAUDE", "subject_sks": [sk]}])
+
+    set_official_areas(cursor)
+
+    assert fetch_theme(cursor, "Plano de saúde")[2] == "SAUDE"
+
+
+def test_every_tpu_area_of_the_civil_scope_has_a_fallback_area():
+    tpu = load_tpu()
+    penal = set(tpu["assuntos_penal"]["raizes"].values())
+    areas = {area["nome"] for area in tpu["areas"].values()} - penal
+
+    assert areas <= set(TPU_AREA_FALLBACK)
 
 
 def test_assert_no_orphan_themes_raises_when_one_has_no_subject(cursor):
